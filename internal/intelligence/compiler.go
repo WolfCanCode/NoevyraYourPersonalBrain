@@ -252,15 +252,26 @@ func adaptiveBudget(store *memory.Store, project string) (int, string, error) {
 	return budget, "adaptive", nil
 }
 
-func knowledgeCandidates(store *memory.Store, query string, limit int) ([]ContextItem, error) {
+func searchTokens(primary, secondary string, limit int) []string {
 	tokens := []string{}
-	for term := range terms(query) {
-		tokens = append(tokens, `"`+strings.ReplaceAll(term, `"`, ``)+`"`)
+	seen := map[string]bool{}
+	appendTerms := func(value string) {
+		for _, term := range termPattern.FindAllString(strings.ToLower(value), -1) {
+			if utf8.RuneCountInString(term) < 2 || seen[term] || len(tokens) >= limit {
+				continue
+			}
+			seen[term] = true
+			tokens = append(tokens, `"`+strings.ReplaceAll(term, `"`, ``)+`"`)
+		}
 	}
-	sort.Strings(tokens)
-	if len(tokens) > 20 {
-		tokens = tokens[:20]
-	}
+	// Task terms must survive the cap; project metadata only broadens retrieval.
+	appendTerms(primary)
+	appendTerms(secondary)
+	return tokens
+}
+
+func knowledgeCandidates(store *memory.Store, task, projectSignals string, limit int) ([]ContextItem, error) {
+	tokens := searchTokens(task, projectSignals, 20)
 	if len(tokens) == 0 {
 		return []ContextItem{}, nil
 	}
@@ -328,11 +339,11 @@ func Compile(store *memory.Store, project memory.Project, task string, budget in
 	if err != nil {
 		return Pack{}, err
 	}
-	queryParts := []string{task}
-	queryParts = append(queryParts, profile.Languages...)
-	queryParts = append(queryParts, profile.Stacks...)
-	queryParts = append(queryParts, profile.Signals...)
-	query := strings.Join(queryParts, " ")
+	projectParts := append([]string{}, profile.Languages...)
+	projectParts = append(projectParts, profile.Stacks...)
+	projectParts = append(projectParts, profile.Signals...)
+	projectSignals := strings.Join(projectParts, " ")
+	query := strings.TrimSpace(task + " " + projectSignals)
 	memories, err := store.Recall(query, project.ID, 24)
 	if err != nil {
 		return Pack{}, err
@@ -341,7 +352,7 @@ func Compile(store *memory.Store, project memory.Project, task string, budget in
 	for index, item := range memories {
 		candidates = append(candidates, ContextItem{Kind: "memory", ID: item.ID, Content: item.Content, Source: item.Source, Score: 100 - float64(index), EstimatedTokens: estimateTokens(item.Content)})
 	}
-	knowledge, err := knowledgeCandidates(store, query, 40)
+	knowledge, err := knowledgeCandidates(store, task, projectSignals, 40)
 	if err != nil {
 		return Pack{}, err
 	}

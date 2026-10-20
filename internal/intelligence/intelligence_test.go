@@ -111,4 +111,22 @@ func TestSourceURLPolicyAndChunking(t *testing.T) {
 	if len(parts) < 2 {
 		t.Fatalf("expected bounded chunks: %d", len(parts))
 	}
+	origin, err := http.NewRequest(http.MethodGet, "https://example.com/guide", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	downgrade, err := http.NewRequest(http.MethodGet, "http://example.com/redirected", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = sourceClient().CheckRedirect(downgrade, []*http.Request{origin}); err == nil {
+		t.Fatal("accepted HTTPS-to-HTTP source redirect")
+	}
+}
+
+func TestSearchTokensPrioritizeTaskBeforeProjectSignals(t *testing.T) {
+	tokens := searchTokens("zebra payment", strings.Repeat("alpha dependency ", 30), 2)
+	if strings.Join(tokens, " ") != `"zebra" "payment"` {
+		t.Fatalf("task terms lost priority: %v", tokens)
+	}
 }

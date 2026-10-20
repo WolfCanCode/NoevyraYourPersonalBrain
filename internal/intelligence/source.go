@@ -199,6 +199,9 @@ func sourceClient() *http.Client {
 			if len(via) >= 4 {
 				return errors.New("too many source redirects")
 			}
+			if _, err := validateSourceURL(req.URL.String()); err != nil {
+				return fmt.Errorf("unsafe source redirect: %w", err)
+			}
 			if len(via) > 0 && !strings.EqualFold(req.URL.Hostname(), via[0].URL.Hostname()) {
 				return errors.New("cross-host source redirect rejected")
 			}
