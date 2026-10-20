@@ -34,7 +34,7 @@ Usage:
   brain approve <memory-id>           Approve a candidate explicitly
   brain status                       Memory counts and local scheduler
   brain digest [--days 7]             Recent activity
-  brain sync [--online]               Local maintenance; optional skills update check
+  brain sync [--sources] [--skills]   Local maintenance; optional trusted-source or skill checks
   brain skills find "query"           Explicit skills.sh discovery (requires npx)
   brain skills trust owner/repo@skill --keyword term
   brain skills list
@@ -290,23 +290,25 @@ func Run(args []string, version, commit, builtAt string, in io.Reader, out, errO
 		}
 		return printJSON(out, v)
 	case "sync":
-		pos, f, e := flags(args, nil, []string{"--online"})
+		pos, f, e := flags(args, nil, []string{"--sources", "--skills", "--online"})
 		if e != nil {
 			return e
 		}
 		if len(pos) > 0 {
-			return errors.New("sync accepts only --online")
+			return errors.New("sync accepts only --sources, --skills or --online")
 		}
 		v, e := store.Sync()
 		if e != nil {
 			return e
 		}
-		if f["--online"] != "" {
+		if f["--sources"] != "" || f["--online"] != "" {
 			sources, sourceErr := intelligence.SyncSources(context.Background(), store)
 			v["sources"] = sources
 			if sourceErr != nil {
 				v["sourceError"] = sourceErr.Error()
 			}
+		}
+		if f["--skills"] != "" || f["--online"] != "" {
 			r, e := external("npx", []string{"--yes", "skills", "check"})
 			v["skillCheck"] = map[string]any{"ok": e == nil, "output": r}
 			if e != nil {

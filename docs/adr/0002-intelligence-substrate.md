@@ -20,10 +20,11 @@ Agents access the same result through `brain advise`, the `brain run` wrappers o
 
 ## Trust and safety invariants
 
-- Network sync is opt-in and only contacts explicitly registered sources.
+- Network sync is opt-in: the user registers sources and explicitly installs the daily schedule. The timer only contacts those registered sources.
 - Sources require HTTPS, except localhost for development tests; credentials and cross-host redirects are rejected.
 - Responses are capped at 2 MiB and stored as inert text with URL and content hash provenance.
 - Remote text cannot become a command, skill installation, verified personal memory or higher-priority instruction.
+- Scheduled refresh never invokes the skills CLI; third-party code checks remain a separate explicit action.
 - An agent cannot add a knowledge source through MCP.
 - Tool recommendations explain their matching signals and require normal user/client setup.
 - Pack size is enforced before output; estimated token use and dropped items are returned.

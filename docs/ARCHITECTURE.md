@@ -10,7 +10,7 @@ The v0.2 intelligence layer lives in `internal/intelligence`: bounded project pr
 
 Keep dependencies pointing inward: adapters call storage policy; storage never launches agents or invokes a model. Migration, FTS rebuild, and maintenance updates use transactions. WAL, a busy timeout, and one pooled connection per process avoid accidental per-connection pragma differences. SQL parameters carry user values; FTS tokens are quoted. Operational errors are returned instead of silently degrading search.
 
-Best practices are adopted from primary sources with a reason and a compatibility test, not copied indiscriminately from agent frameworks. Prefer local data, explicit trust transitions, bounded protocol messages/subprocess output, opt-in external execution, minimal workflow permissions and SHA-pinned actions. Review the linked references during weekly improvements; do not automatically install or execute fetched instructions.
+Best practices are adopted from primary sources with a reason and a compatibility test, not copied indiscriminately from agent frameworks. Prefer local data, explicit trust transitions, bounded protocol messages/subprocess output, opt-in external execution, minimal workflow permissions and SHA-pinned actions. The opted-in daily timer refreshes registered sources with conditional requests; it never installs or executes fetched instructions.
 
 - `src/store.mjs`: SQLite schema, FTS5, scope-filtered search, candidate review, project hashing and append-only event records.
 - `src/mcp.mjs`: JSON-RPC 2.0 stdio gateway; tool calls are restricted to the invoking project. Agent writes become candidates.
@@ -36,7 +36,7 @@ Best practices are adopted from primary sources with a reason and a compatibilit
 - Project scope relies on working directory and Git root.
 - MCP implementation is intentionally minimal; it is not a complete MCP SDK implementation.
 - `brain run` passes a short instruction containing a file path to installed CLIs; it doesn't inject native lifecycle hooks.
-- Daily maintenance checks skills for updates but doesn't automatically upgrade them.
+- Daily maintenance refreshes only explicitly trusted sources. Skill checks and upgrades remain explicit because the skills CLI executes third-party code.
 
 ## Planned next architecture milestone
 
