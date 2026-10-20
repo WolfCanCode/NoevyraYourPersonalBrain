@@ -26,6 +26,8 @@ Do not move published tags. Fix a failed release before retrying; if a release a
 
 Download the appropriate archive and `SHA256SUMS` from the release, verify it with `sha256sum --check SHA256SUMS` (Linux), `shasum -a 256` (macOS), or `Get-FileHash -Algorithm SHA256` (PowerShell), extract and place the binary on PATH. macOS downloads are not Developer ID signed/notarized and Windows executables are not Authenticode signed; OS trust prompts may appear. Checksums detect corrupted downloads but are not publisher signatures.
 
+The repository-root `install.sh` and `install.ps1` automate that same download, checksum verification and PATH-directory installation. The POSIX installer supports Linux/macOS on AMD64 and ARM64; the PowerShell installer supports the published Windows AMD64 target. Both default to the latest GitHub Release and accept a pinned version and custom install directory. Keep the asset naming convention and installer tests synchronized whenever the release matrix changes.
+
 Before switching, stop running Brain processes and back up the database with SQLite's backup API/command; copying only `brain.sqlite` while writers use WAL can omit recent transactions. Reconfigure MCP to use `/absolute/path/brain mcp` and reinstall local schedules with the new permanent executable path via `brain init --schedule`. Native preview and legacy JavaScript remain available during migration.
 
 ## Sources
