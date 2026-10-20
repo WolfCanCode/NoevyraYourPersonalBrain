@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for improving Personal AI Brain! This project is a small local-first CLI; favor correctness and clarity over adding services.
+Thanks for improving Noevyra! This project is a small local-first CLI; favor correctness and clarity over adding services.
 
 1. Open an issue or describe the behavior you're changing.
 2. Write focused tests for new storage, intelligence, CLI, or MCP behavior.

@@ -68,8 +68,8 @@ func schedulerDefinitions(platform, exe, brainHome string) (string, string, erro
 		return "", "", err
 	}
 	env := strconv.Quote("BRAIN_HOME=" + strings.ReplaceAll(brainHome, "%", "%%"))
-	service := "[Unit]\nDescription=Personal AI Brain daily trusted-source refresh\n[Service]\nType=oneshot\nEnvironment=" + env + "\nExecStart=" + quotedExe + " sync --sources\n"
-	timer := "[Unit]\nDescription=Daily Personal AI Brain trusted-source refresh\n[Timer]\nOnCalendar=*-*-* 08:00:00\nPersistent=true\n[Install]\nWantedBy=timers.target\n"
+	service := "[Unit]\nDescription=Noevyra daily trusted-source refresh\n[Service]\nType=oneshot\nEnvironment=" + env + "\nExecStart=" + quotedExe + " sync --sources\n"
+	timer := "[Unit]\nDescription=Daily Noevyra trusted-source refresh\n[Timer]\nOnCalendar=*-*-* 08:00:00\nPersistent=true\n[Install]\nWantedBy=timers.target\n"
 	return service, timer, nil
 }
 

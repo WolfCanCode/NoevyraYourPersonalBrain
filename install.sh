@@ -7,7 +7,7 @@ install_dir="${BRAIN_INSTALL_DIR:-$HOME/.local/bin}"
 
 usage() {
   cat <<'EOF'
-Install a tested Personal AI Brain release binary.
+Install a tested Noevyra release binary.
 
 Usage: install.sh [--version vX.Y.Z] [--bin-dir PATH]
 
@@ -70,7 +70,7 @@ trap 'rm -rf "$tmp_dir"' EXIT HUP INT TERM
 archive="$tmp_dir/$asset"
 sums="$tmp_dir/SHA256SUMS"
 
-printf 'Downloading Personal AI Brain %s for %s/%s...\n' "$version" "$os" "$arch"
+printf 'Downloading Noevyra %s for %s/%s...\n' "$version" "$os" "$arch"
 curl --proto '=https' --tlsv1.2 -fsSL "$base_url/$asset" -o "$archive"
 curl --proto '=https' --tlsv1.2 -fsSL "$base_url/SHA256SUMS" -o "$sums"
 
@@ -101,7 +101,7 @@ else
 fi
 
 "$install_dir/brain" version >/dev/null
-printf 'Installed Personal AI Brain %s to %s/brain\n' "$version" "$install_dir"
+printf 'Installed Noevyra %s to %s/brain\n' "$version" "$install_dir"
 case ":${PATH:-}:" in
   *:"$install_dir":*) ;;
   *) printf 'Add %s to PATH, then run: brain init\n' "$install_dir" ;;
