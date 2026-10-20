@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/WolfCanCode/personal-ai-brain/internal/intelligence"
 	"github.com/WolfCanCode/personal-ai-brain/internal/memory"
 )
 
@@ -25,6 +26,11 @@ Usage:
   brain remember "text" [--scope personal|project] [--type decision|...]
   brain recall "query"               Search verified memory
   brain context "task"               Generate untrusted context pack
+  brain profile                      Detect project stack from bounded local evidence
+  brain advise "task" [--budget N]    Compile evidence + capability recommendations
+  brain feedback <pack-id> --outcome helpful|partial|harmful [--tokens N]
+  brain sources add URL --name NAME [--tags go,security]
+  brain sources seed|add|list|sync    Manage explicitly trusted knowledge sources
   brain approve <memory-id>           Approve a candidate explicitly
   brain status                       Memory counts and local scheduler
   brain digest [--days 7]             Recent activity
@@ -112,7 +118,7 @@ func Run(args []string, version, commit, builtAt string, in io.Reader, out, errO
 		}
 		return printJSON(out, v)
 	}
-	allowed := map[string]bool{"init": true, "remember": true, "recall": true, "context": true, "approve": true, "status": true, "digest": true, "sync": true, "skills": true, "run": true, "doctor": true, "mcp": true}
+	allowed := map[string]bool{"init": true, "remember": true, "recall": true, "context": true, "profile": true, "advise": true, "feedback": true, "sources": true, "approve": true, "status": true, "digest": true, "sync": true, "skills": true, "run": true, "doctor": true, "mcp": true}
 	if !allowed[cmd] {
 		return fmt.Errorf("unknown command %q; run brain help", cmd)
 	}
@@ -143,7 +149,7 @@ func Run(args []string, version, commit, builtAt string, in io.Reader, out, errO
 	}
 	switch cmd {
 	case "mcp":
-		return ServeMCP(store, project.ID, version, in, out)
+		return ServeMCP(store, project, version, in, out)
 	case "init":
 		pos, f, e := flags(args, nil, []string{"--schedule"})
 		if e != nil {
@@ -192,6 +198,54 @@ func Run(args []string, version, commit, builtAt string, in io.Reader, out, errO
 			return e
 		}
 		return printJSON(out, v)
+	case "profile":
+		if len(args) != 0 {
+			return errors.New("profile accepts no arguments")
+		}
+		v, e := intelligence.Profile(project.Root)
+		if e != nil {
+			return e
+		}
+		return printJSON(out, v)
+	case "advise":
+		pos, f, e := flags(args, []string{"--budget"}, nil)
+		if e != nil {
+			return e
+		}
+		budget := 0
+		if f["--budget"] != "" {
+			budget, e = strconv.Atoi(f["--budget"])
+			if e != nil {
+				return errors.New("budget must be an integer")
+			}
+		}
+		v, e := intelligence.Compile(store, project, strings.Join(pos, " "), budget)
+		if e != nil {
+			return e
+		}
+		return printJSON(out, v)
+	case "feedback":
+		pos, f, e := flags(args, []string{"--outcome", "--tokens", "--notes"}, nil)
+		if e != nil {
+			return e
+		}
+		if len(pos) != 1 {
+			return errors.New("feedback requires one context pack ID")
+		}
+		tokens := 0
+		if f["--tokens"] != "" {
+			tokens, e = strconv.Atoi(f["--tokens"])
+			if e != nil {
+				return errors.New("tokens must be an integer")
+			}
+		}
+		v, e := intelligence.Feedback(store, pos[0], f["--outcome"], tokens, f["--notes"])
+		if e != nil {
+			return e
+		}
+		return printJSON(out, v)
+	case "sources":
+		return sources(store, args, out)
 	case "approve":
 		if len(args) != 1 {
 			return errors.New("approve requires one memory ID")
@@ -211,6 +265,9 @@ func Run(args []string, version, commit, builtAt string, in io.Reader, out, errO
 		}
 		v["project"] = project
 		v["scheduler"] = schedulerStatus()
+		if count, countErr := intelligence.KnowledgeCount(store); countErr == nil {
+			v["activeKnowledge"] = count
+		}
 		return printJSON(out, v)
 	case "digest":
 		pos, f, e := flags(args, []string{"--days"}, nil)
@@ -245,6 +302,11 @@ func Run(args []string, version, commit, builtAt string, in io.Reader, out, errO
 			return e
 		}
 		if f["--online"] != "" {
+			sources, sourceErr := intelligence.SyncSources(context.Background(), store)
+			v["sources"] = sources
+			if sourceErr != nil {
+				v["sourceError"] = sourceErr.Error()
+			}
 			r, e := external("npx", []string{"--yes", "skills", "check"})
 			v["skillCheck"] = map[string]any{"ok": e == nil, "output": r}
 			if e != nil {
@@ -258,6 +320,69 @@ func Run(args []string, version, commit, builtAt string, in io.Reader, out, errO
 		return runAgent(store, project, args, in, out, errOut, home)
 	}
 	return errors.New("unhandled command")
+}
+
+func sources(store *memory.Store, args []string, out io.Writer) error {
+	if len(args) == 0 {
+		return errors.New("use sources seed|add|list|sync|pause")
+	}
+	sub := args[0]
+	args = args[1:]
+	switch sub {
+	case "seed":
+		if len(args) != 0 {
+			return errors.New("sources seed accepts no arguments")
+		}
+		v, err := intelligence.SeedSources(store)
+		if err != nil {
+			return err
+		}
+		return printJSON(out, v)
+	case "list":
+		if len(args) != 0 {
+			return errors.New("sources list accepts no arguments")
+		}
+		v, err := intelligence.ListSources(store)
+		if err != nil {
+			return err
+		}
+		return printJSON(out, v)
+	case "add":
+		pos, f, err := flags(args, []string{"--name", "--tags"}, nil)
+		if err != nil {
+			return err
+		}
+		if len(pos) != 1 {
+			return errors.New("sources add requires one URL")
+		}
+		v, err := intelligence.AddSource(store, f["--name"], pos[0], f["--tags"])
+		if err != nil {
+			return err
+		}
+		return printJSON(out, v)
+	case "sync":
+		if len(args) != 0 {
+			return errors.New("sources sync accepts no arguments")
+		}
+		v, err := intelligence.SyncSources(context.Background(), store)
+		if err != nil {
+			return err
+		}
+		return printJSON(out, v)
+	case "pause":
+		if len(args) != 1 {
+			return errors.New("sources pause requires one source ID")
+		}
+		ok, err := intelligence.PauseSource(store, args[0])
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return errors.New("active source not found")
+		}
+		return printJSON(out, map[string]any{"paused": args[0]})
+	}
+	return errors.New("use sources seed|add|list|sync|pause")
 }
 
 // Bound subprocess output and duration; no shell interpolation of user content.
@@ -333,7 +458,7 @@ func runAgent(s *memory.Store, p memory.Project, args []string, in io.Reader, ou
 	if query == "" {
 		query = "project decisions conventions recent work"
 	}
-	pack, err := s.Context(query, p.ID, 8)
+	pack, err := intelligence.Compile(s, p, query, 0)
 	if err != nil {
 		return err
 	}

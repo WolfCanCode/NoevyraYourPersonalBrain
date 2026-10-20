@@ -9,12 +9,16 @@ import (
 	"io"
 	"strings"
 
+	"github.com/WolfCanCode/personal-ai-brain/internal/intelligence"
 	"github.com/WolfCanCode/personal-ai-brain/internal/memory"
 )
 
 // This intentionally small stdio adapter supports the stable 2025 lifecycle.
 // Protocol versions are negotiated from implemented versions, never echoed blindly.
 const toolsJSON = `[
+ {"name":"brain_advise","description":"Compile a token-budgeted evidence pack, project profile and skill/MCP/CLI recommendations without invoking an LLM.","inputSchema":{"type":"object","properties":{"task":{"type":"string"},"budgetTokens":{"type":"integer","minimum":128,"maximum":16000}},"required":["task"],"additionalProperties":false}},
+ {"name":"brain_profile","description":"Detect the active project's languages, stack and operational signals from bounded local metadata.","inputSchema":{"type":"object","properties":{},"additionalProperties":false}},
+ {"name":"brain_feedback","description":"Report whether a context pack helped so future knowledge ranking can improve.","inputSchema":{"type":"object","properties":{"packId":{"type":"string"},"outcome":{"type":"string","enum":["helpful","partial","harmful"]},"tokensUsed":{"type":"integer","minimum":0},"notes":{"type":"string"}},"required":["packId","outcome"],"additionalProperties":false}},
  {"name":"brain_context","description":"Retrieve verified memories for a task in the active project.","inputSchema":{"type":"object","properties":{"task":{"type":"string"},"limit":{"type":"integer","minimum":1,"maximum":30}},"required":["task"],"additionalProperties":false}},
  {"name":"brain_recall","description":"Search verified project and personal memories.","inputSchema":{"type":"object","properties":{"query":{"type":"string"},"limit":{"type":"integer","minimum":1,"maximum":30}},"required":["query"],"additionalProperties":false}},
  {"name":"brain_remember","description":"Propose a project memory for explicit user approval.","inputSchema":{"type":"object","properties":{"content":{"type":"string","minLength":1,"maxLength":20000},"type":{"type":"string","enum":["identity","semantic","episodic","project","procedural","decision"]},"scope":{"type":"string","enum":["project"]}},"required":["content"],"additionalProperties":false}},
@@ -49,7 +53,7 @@ func validID(id json.RawMessage) bool {
 	return false
 }
 
-func ServeMCP(store *memory.Store, project, version string, input io.Reader, output io.Writer) error {
+func ServeMCP(store *memory.Store, project memory.Project, version string, input io.Reader, output io.Writer) error {
 	scan := bufio.NewScanner(input)
 	scan.Buffer(make([]byte, 4096), 1024*1024)
 	encoder := json.NewEncoder(output)
@@ -183,8 +187,34 @@ func ServeMCP(store *memory.Store, project, version string, input io.Reader, out
 
 var errUnknownTool = errors.New("unknown tool")
 
-func callTool(s *memory.Store, project, name string, raw json.RawMessage) (any, error) {
+func callTool(s *memory.Store, project memory.Project, name string, raw json.RawMessage) (any, error) {
 	switch name {
+	case "brain_advise":
+		var args struct {
+			Task         string `json:"task"`
+			BudgetTokens int    `json:"budgetTokens"`
+		}
+		if err := strictDecode(raw, &args); err != nil {
+			return nil, err
+		}
+		return intelligence.Compile(s, project, args.Task, args.BudgetTokens)
+	case "brain_profile":
+		var args struct{}
+		if err := strictDecode(raw, &args); err != nil {
+			return nil, err
+		}
+		return intelligence.Profile(project.Root)
+	case "brain_feedback":
+		var args struct {
+			PackID     string `json:"packId"`
+			Outcome    string `json:"outcome"`
+			TokensUsed int    `json:"tokensUsed"`
+			Notes      string `json:"notes"`
+		}
+		if err := strictDecode(raw, &args); err != nil {
+			return nil, err
+		}
+		return intelligence.Feedback(s, args.PackID, args.Outcome, args.TokensUsed, args.Notes)
 	case "brain_context", "brain_recall":
 		var args struct {
 			Task  string `json:"task"`
@@ -209,9 +239,9 @@ func callTool(s *memory.Store, project, name string, raw json.RawMessage) (any, 
 			}
 		}
 		if name == "brain_context" {
-			return s.Context(text, project, limit)
+			return s.Context(text, project.ID, limit)
 		}
-		return s.Recall(text, project, limit)
+		return s.Recall(text, project.ID, limit)
 	case "brain_remember":
 		var args struct {
 			Content string `json:"content"`
@@ -224,7 +254,7 @@ func callTool(s *memory.Store, project, name string, raw json.RawMessage) (any, 
 		if args.Scope != "" && args.Scope != "project" {
 			return nil, errors.New("only project candidates are permitted")
 		}
-		return s.Propose(memory.Input{Content: args.Content, Type: args.Type, Scope: args.Scope, ProjectID: project})
+		return s.Propose(memory.Input{Content: args.Content, Type: args.Type, Scope: args.Scope, ProjectID: project.ID})
 	case "brain_finish_task":
 		var args struct {
 			Summary  string `json:"summary"`
@@ -237,7 +267,7 @@ func callTool(s *memory.Store, project, name string, raw json.RawMessage) (any, 
 		if strings.TrimSpace(args.Summary) == "" || (args.Status != "completed" && args.Status != "blocked" && args.Status != "failed") {
 			return nil, errors.New("summary and a valid status required")
 		}
-		id, err := s.Log("task_finish", project, args)
+		id, err := s.Log("task_finish", project.ID, args)
 		return map[string]any{"eventId": id}, err
 	case "brain_handoff":
 		var args struct {
@@ -252,7 +282,7 @@ func callTool(s *memory.Store, project, name string, raw json.RawMessage) (any, 
 		if strings.TrimSpace(args.Objective) == "" {
 			return nil, errors.New("objective required")
 		}
-		id, err := s.Log("handoff", project, args)
+		id, err := s.Log("handoff", project.ID, args)
 		return map[string]any{"eventId": id}, err
 	}
 	return nil, fmt.Errorf("%w: %s", errUnknownTool, name)
