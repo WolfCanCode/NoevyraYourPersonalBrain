@@ -12,6 +12,26 @@ Local-first CLI + MCP memory gateway for existing coding agents. Keep shared pro
 
 The native implementation ships as a single executable for memory, SQLite FTS5 and MCP. It shares the existing JavaScript database and does not require Node for these operations. JavaScript remains supported while compatibility is verified.
 
+Install the latest tested macOS or Linux release without Go or Node:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/WolfCanCode/personal-ai-brain/main/install.sh | sh
+export PATH="$HOME/.local/bin:$PATH"
+brain init
+```
+
+The installer detects OS/architecture, downloads the matching GitHub Release archive, verifies it against the published `SHA256SUMS`, and installs to `~/.local/bin` without `sudo`. Pin a release with `BRAIN_VERSION=v0.1.0`, or choose a destination with `BRAIN_INSTALL_DIR=/path/to/bin`. On Windows PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/WolfCanCode/personal-ai-brain/main/install.ps1 | iex
+$env:Path = "$HOME\.local\bin;$env:Path"
+brain init
+```
+
+Review a remote installer before piping it to a shell when your threat model requires it. Checksums protect the downloaded archive from corruption or mismatch; they are not code-signing signatures.
+
+Build from source instead:
+
 ```sh
 go build -o build/brain ./cmd/brain
 ./build/brain init
@@ -26,7 +46,7 @@ go build -o build/brain ./cmd/brain
 ./build/brain init --schedule
 ```
 
-Build requires Go >= 1.24; CI pins its toolchain and tests native binaries on five OS/architecture combinations. Downloads are available as development artifacts on successful CI runs; tagged releases publish archives, SHA-256 checksums and automatically generated release notes. See [release instructions](docs/RELEASING.md) and [runtime decision](docs/adr/0001-native-go-runtime.md).
+Building requires Go >= 1.24; installing a release binary does not. CI pins its toolchain and tests native binaries on five OS/architecture combinations. Downloads are available as development artifacts on successful CI runs; tagged releases publish archives, SHA-256 checksums and automatically generated release notes. See [release instructions](docs/RELEASING.md) and [runtime decision](docs/adr/0001-native-go-runtime.md).
 
 Native `init` only creates the store; `--schedule` is required to register a timer. Scheduled native maintenance is local-only. `brain sync --online` and skills commands explicitly use `npx`, which requires Node and may execute third-party code. Windows scheduling remains manual and file privacy depends on user ACLs.
 
