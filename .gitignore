@@ -1,0 +1,17 @@
+node_modules/
+.env
+.env.*
+!.env.example
+.brain/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.db
+*.db-shm
+*.db-wal
+.DS_Store
+coverage/
+dist/
+
+# Vercel project association (local only)
+.vercel/
