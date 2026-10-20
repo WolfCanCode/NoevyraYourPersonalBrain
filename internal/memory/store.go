@@ -36,6 +36,28 @@ CREATE TABLE IF NOT EXISTS events (
 CREATE INDEX IF NOT EXISTS ix_events_created_at ON events(created_at);
 CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS approved_skills (ref TEXT PRIMARY KEY, keyword TEXT NOT NULL, approved_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS knowledge_sources (
+ id TEXT PRIMARY KEY, name TEXT NOT NULL, url TEXT NOT NULL UNIQUE, tags TEXT NOT NULL DEFAULT '',
+ status TEXT NOT NULL CHECK(status IN ('active','paused')), etag TEXT, last_modified TEXT,
+ content_hash TEXT, last_synced_at TEXT, created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS knowledge_items (
+ id TEXT PRIMARY KEY, source_id TEXT NOT NULL REFERENCES knowledge_sources(id) ON DELETE CASCADE,
+ title TEXT NOT NULL, content TEXT NOT NULL, tags TEXT NOT NULL DEFAULT '', content_hash TEXT NOT NULL,
+ status TEXT NOT NULL CHECK(status IN ('active','superseded')), quality REAL NOT NULL DEFAULT 0,
+ updated_at TEXT NOT NULL, UNIQUE(source_id,content_hash)
+);
+CREATE INDEX IF NOT EXISTS ix_knowledge_source_status ON knowledge_items(source_id,status);
+CREATE TABLE IF NOT EXISTS context_packs (
+ id TEXT PRIMARY KEY, project_id TEXT NOT NULL, task TEXT NOT NULL, budget_tokens INTEGER NOT NULL,
+ estimated_tokens INTEGER NOT NULL, created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS context_pack_items (
+ pack_id TEXT NOT NULL REFERENCES context_packs(id) ON DELETE CASCADE,
+ item_kind TEXT NOT NULL CHECK(item_kind IN ('memory','knowledge')), item_id TEXT NOT NULL,
+ score REAL NOT NULL, estimated_tokens INTEGER NOT NULL,
+ PRIMARY KEY(pack_id,item_kind,item_id)
+);
 CREATE VIRTUAL TABLE IF NOT EXISTS memory_fts USING fts5(content, content='memory', content_rowid='rowid');
 CREATE TRIGGER IF NOT EXISTS memory_fts_ai AFTER INSERT ON memory BEGIN
  INSERT INTO memory_fts(rowid,content) VALUES(new.rowid,new.content); END;
@@ -44,6 +66,14 @@ CREATE TRIGGER IF NOT EXISTS memory_fts_ad AFTER DELETE ON memory BEGIN
 CREATE TRIGGER IF NOT EXISTS memory_fts_au AFTER UPDATE OF content ON memory BEGIN
  INSERT INTO memory_fts(memory_fts,rowid,content) VALUES('delete',old.rowid,old.content);
  INSERT INTO memory_fts(rowid,content) VALUES(new.rowid,new.content); END;
+CREATE VIRTUAL TABLE IF NOT EXISTS knowledge_fts USING fts5(title,content,tags,content='knowledge_items',content_rowid='rowid');
+CREATE TRIGGER IF NOT EXISTS knowledge_fts_ai AFTER INSERT ON knowledge_items BEGIN
+ INSERT INTO knowledge_fts(rowid,title,content,tags) VALUES(new.rowid,new.title,new.content,new.tags); END;
+CREATE TRIGGER IF NOT EXISTS knowledge_fts_ad AFTER DELETE ON knowledge_items BEGIN
+ INSERT INTO knowledge_fts(knowledge_fts,rowid,title,content,tags) VALUES('delete',old.rowid,old.title,old.content,old.tags); END;
+CREATE TRIGGER IF NOT EXISTS knowledge_fts_au AFTER UPDATE OF title,content,tags ON knowledge_items BEGIN
+ INSERT INTO knowledge_fts(knowledge_fts,rowid,title,content,tags) VALUES('delete',old.rowid,old.title,old.content,old.tags);
+ INSERT INTO knowledge_fts(rowid,title,content,tags) VALUES(new.rowid,new.title,new.content,new.tags); END;
 `
 
 type Store struct {
@@ -164,8 +194,8 @@ func Open(home string) (*Store, error) {
 	if err = tx.QueryRow("PRAGMA user_version").Scan(&version); err != nil {
 		return fail(err)
 	}
-	if version > 1 {
-		return fail(fmt.Errorf("database schema %d is newer than supported version 1", version))
+	if version > 2 {
+		return fail(fmt.Errorf("database schema %d is newer than supported version 2", version))
 	}
 	if _, err = tx.Exec(schema); err != nil {
 		return fail(err)
@@ -173,9 +203,17 @@ func Open(home string) (*Store, error) {
 	if version < 1 {
 		// External-content FTS count(*) reads the content table, not the actual index.
 		// A one-time transactional rebuild correctly indexes existing v0.1 data.
-		if _, err = tx.Exec(`INSERT INTO memory_fts(memory_fts) VALUES('rebuild'); PRAGMA user_version=1;`); err != nil {
+		if _, err = tx.Exec(`INSERT INTO memory_fts(memory_fts) VALUES('rebuild');`); err != nil {
 			return fail(err)
 		}
+	}
+	if version < 2 {
+		if _, err = tx.Exec(`INSERT INTO knowledge_fts(knowledge_fts) VALUES('rebuild');`); err != nil {
+			return fail(err)
+		}
+	}
+	if _, err = tx.Exec(`PRAGMA user_version=2;`); err != nil {
+		return fail(err)
 	}
 	if err = tx.Commit(); err != nil {
 		return fail(err)

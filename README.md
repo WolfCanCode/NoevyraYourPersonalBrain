@@ -4,7 +4,7 @@
 
 Local-first CLI + MCP memory gateway for existing coding agents. Keep shared project decisions and personal preferences outside any single model or chat session. Find skills through [skills.sh](https://skills.sh), review them, and let your agents reuse them by task keyword.
 
-> **Status: early MVP (v0.1.0)**. This is not a self-improving autonomous agent. Memory retrieval and approved skill loading work today; automatic skill selection from untrusted sources, benchmark-driven evolution, and reliable native hooks for every agent are future work.
+> **Status: v0.2 development**. The released v0.1.0 provides native memory and MCP. The current branch adds deterministic project profiling, trusted-source retrieval, token-budgeted context compilation, capability recommendations and feedback-weighted ranking. It is not an autonomous agent and does not execute remote instructions.
 
 ## Quick start
 
@@ -17,6 +17,10 @@ go build -o build/brain ./cmd/brain
 ./build/brain init
 ./build/brain remember "Payment webhooks require idempotency" --type decision
 ./build/brain recall payment
+./build/brain profile
+./build/brain advise "implement a secure payment webhook" --budget 1200
+./build/brain sources seed   # register a reviewable primary-source starter catalog
+./build/brain sources sync   # explicit network pull; daily --online sync refreshes it
 ./build/brain mcp-config
 # Optional: install daily local-only maintenance, using a permanent binary path.
 ./build/brain init --schedule
@@ -54,6 +58,12 @@ brain run claude "Implement payment webhook"
 | `brain remember "..." --scope personal` | Store personal memory available to any project |
 | `brain recall "payment"` | Search relevant verified memory |
 | `brain context "build payment API"` | Generate task context pack |
+| `brain profile` | Detect languages, stacks and operational signals from bounded project evidence |
+| `brain advise "task" --budget 1200` | Compile memories, external knowledge and capability recommendations to a token budget |
+| `brain feedback <pack-id> --outcome helpful` | Feed a pack outcome back into bounded knowledge ranking |
+| `brain sources add URL --name NAME --tags ...` | Explicitly trust a text/Markdown knowledge source |
+| `brain sources seed` | Register the bundled Go, OWASP and MCP primary-source starter catalog |
+| `brain sources sync` | Pull registered sources with provenance, limits and conditional requests |
 | `brain approve <id>` | Promote an agent-proposed candidate to verified |
 | `brain run claude "task"` | Launch Claude CLI with private context file |
 | `brain run codex "task"` | Launch Codex CLI with the same brain |
@@ -82,6 +92,9 @@ brain mcp-config  # use JSON for Cursor's MCP config
 ### MCP tools
 
 - `brain_context(task, limit?)` — verified context pack for a task.
+- `brain_advise(task, budgetTokens?)` — full token-budgeted intelligence pack with project profile and capability recommendations.
+- `brain_profile()` — bounded stack and project-signal detection.
+- `brain_feedback(packId, outcome, tokensUsed?, notes?)` — outcome signal for future knowledge ranking.
 - `brain_recall(query, limit?)` — verified scoped memory search.
 - `brain_remember(content, type?)` — create a **project-scoped candidate** for review.
 - `brain_finish_task(summary, status, evidence?)` — store a task outcome event.
@@ -122,9 +135,11 @@ Claude / Codex / Cursor CLI
                             One SQLite DB
                           ~/.brain/brain.sqlite
                                    │
-               Memory + FTS5 + Events + Trusted Skills
+       Memory + Knowledge + Packs + Feedback + Trusted Skills
                                    │
-                           Daily sync scheduler
+             Project profiler + Context compiler + Router
+                                   │
+                    Explicit online source synchronization
 ```
 
 GitHub contains **public application source**, not private memories. Do not add local databases, secrets, context packs or API keys to commits. The `.gitignore` covers standard local files; still review changes before committing.
@@ -137,7 +152,8 @@ GitHub contains **public application source**, not private memories. Do not add 
 - Skill trust does not sandbox its scripts: only trust and use skills after reviewing them.
 - Agent launch wrapper creates a `0600` temporary context file and removes it when the child process exits.
 - Private SQLite data lives in `~/.brain` (directory `0700`, database `0600`). Backups must be protected separately.
-- No embeddings, semantic vector search, conflict reconciliation, automatic lesson learning, or cross-device sync in this MVP.
+- No embeddings, semantic vector search, conflict reconciliation or cross-device sync. The v0.2 compiler establishes a measurable lexical baseline first.
+- External source content is inert, untrusted evidence. It is bounded, hashed and attributed; it is never executed or promoted to an instruction.
 - Agent CLI invocation and MCP compatibility should be tested against your installed versions; `brain run` is a basic wrapper, not a transparent full agent harness.
 
 ## Development
@@ -158,7 +174,12 @@ Landing page: [`site/index.html`](site/index.html), deploy as a static site. No 
 - [x] CLI wrapper for installed agents
 - [x] Daily maintenance for macOS/Linux
 - [x] skills.sh find + manually approved skill use
-- [ ] Runtime skill discovery/recommendation when no match (with policy and prompt-injection protection)
+- [x] Deterministic project profiler and token-budgeted context compiler
+- [x] Explainable skill/MCP/CLI recommendations without auto-installation
+- [x] Explicitly trusted source sync with provenance and prompt-injection boundaries
+- [x] Context-pack feedback and bounded knowledge quality scoring
+- [ ] Curated primary-source feed catalog and source-specific extractors
+- [ ] Benchmark recommendation precision and tokens per successful task
 - [ ] Session capture adapters and automatic outcome extraction
 - [ ] Project identity handshake across MCP clients
 - [ ] Skill version pinning and validated upgrades

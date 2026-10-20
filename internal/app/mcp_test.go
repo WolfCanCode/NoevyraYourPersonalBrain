@@ -27,7 +27,7 @@ func TestMCPProtocolAndCandidatePolicy(t *testing.T) {
 		`{`,
 	}, "\n")
 	var output bytes.Buffer
-	if e = ServeMCP(s, "p", "test", strings.NewReader(input), &output); e != nil {
+	if e = ServeMCP(s, memory.Project{ID: "p", Name: "test", Root: t.TempDir()}, "test", strings.NewReader(input), &output); e != nil {
 		t.Fatal(e)
 	}
 	lines := strings.Split(strings.TrimSpace(output.String()), "\n")
