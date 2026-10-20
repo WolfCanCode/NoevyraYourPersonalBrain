@@ -1,6 +1,6 @@
 # Deploy the landing page on Vercel
 
-Personal AI Brain is a **local-first CLI**, not a cloud backend. This Vercel deployment publishes the **static landing page only** from `site/`.
+Noevyra is a **local-first CLI**, not a cloud backend. This Vercel deployment publishes the **static landing page only** from `site/`.
 
 ## Option A: Deploy from a GitHub repository (recommended)
 

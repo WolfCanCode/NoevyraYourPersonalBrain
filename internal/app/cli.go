@@ -19,7 +19,7 @@ import (
 	"github.com/WolfCanCode/personal-ai-brain/internal/memory"
 )
 
-const help = `Personal AI Brain — native Go preview
+const help = `Noevyra — intelligence that evolves
 
 Usage:
   brain init [--schedule]            Create private SQLite; optionally install daily timer

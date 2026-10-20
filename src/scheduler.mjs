@@ -25,8 +25,8 @@ export function installScheduler(executable){
   }
   if(platform==='linux'){
     const dir=path.join(os.homedir(),'.config/systemd/user');fs.mkdirSync(dir,{recursive:true});
-    const service=`[Unit]\nDescription=Personal AI Brain daily maintenance\n[Service]\nType=oneshot\nExecStart=${node} ${executable} sync --online\n`;
-    const timer='[Unit]\nDescription=Daily Personal AI Brain maintenance\n[Timer]\nOnCalendar=*-*-* 08:00:00\nPersistent=true\n[Install]\nWantedBy=timers.target\n';
+    const service=`[Unit]\nDescription=Noevyra daily maintenance\n[Service]\nType=oneshot\nExecStart=${node} ${executable} sync --online\n`;
+    const timer='[Unit]\nDescription=Daily Noevyra maintenance\n[Timer]\nOnCalendar=*-*-* 08:00:00\nPersistent=true\n[Install]\nWantedBy=timers.target\n';
     fs.writeFileSync(path.join(dir,'personal-ai-brain.service'),service);
     fs.writeFileSync(path.join(dir,'personal-ai-brain.timer'),timer);
     exec('systemctl',['--user','daemon-reload']);

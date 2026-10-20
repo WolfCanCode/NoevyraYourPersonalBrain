@@ -1,12 +1,16 @@
-# 🧠 Personal AI Brain
+<p align="center">
+  <img src="site/assets/noevyra-logo.jpg" alt="Noevyra — Intelligence That Evolves" width="320">
+</p>
 
-**One brain. Any agent. Always learning.**
+# Noevyra
+
+**Intelligence that evolves. One brain. Any agent.**
 
 > **Your model is not the bottleneck. Rebuilding the same context is.**
 
-Personal AI Brain is a local-first thinking layer for coding agents. It remembers reviewed decisions, understands the current project, pulls relevant best practices and hands any agent a compact, tool-aware starting point—without locking that knowledge inside one model or chat.
+Noevyra is a local-first thinking layer for coding agents. It remembers reviewed decisions, understands the current project, pulls relevant best practices and hands any agent a compact, tool-aware starting point—without locking that knowledge inside one model or chat.
 
-> **Status: v0.2.0 released** with deterministic project profiling, trusted-source retrieval, token-budgeted context compilation, explainable capability recommendations and feedback-weighted ranking. Current `main` adds an opted-in daily trusted-source refresh. Brain is not an autonomous agent and does not execute remote instructions.
+> **Status: v0.2.1 released** with deterministic project profiling, opted-in daily trusted-source refresh, token-budgeted context compilation, explainable capability recommendations and feedback-weighted ranking. Noevyra is not an autonomous agent and does not execute remote instructions.
 
 ## Why this exists
 
@@ -47,7 +51,7 @@ export PATH="$HOME/.local/bin:$PATH"
 brain init
 ```
 
-The installer detects OS/architecture, downloads the matching GitHub Release archive, verifies it against the published `SHA256SUMS`, and installs to `~/.local/bin` without `sudo`. Pin a release with `BRAIN_VERSION=v0.2.0`, or choose a destination with `BRAIN_INSTALL_DIR=/path/to/bin`. On Windows PowerShell:
+The installer detects OS/architecture, downloads the matching GitHub Release archive, verifies it against the published `SHA256SUMS`, and installs to `~/.local/bin` without `sudo`. Pin a release with `BRAIN_VERSION=v0.2.1`, or choose a destination with `BRAIN_INSTALL_DIR=/path/to/bin`. On Windows PowerShell:
 
 ```powershell
 irm https://raw.githubusercontent.com/WolfCanCode/personal-ai-brain/main/install.ps1 | iex

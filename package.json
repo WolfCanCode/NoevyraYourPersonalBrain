@@ -1,7 +1,7 @@
 {
   "name": "personal-ai-brain",
   "version": "0.1.0",
-  "description": "One brain. Any agent. Always learning. A local-first shared memory CLI for coding agents.",
+  "description": "Noevyra is a local-first intelligence layer for coding agents.",
   "type": "module",
   "bin": { "brain": "./bin/brain.mjs" },
   "scripts": {

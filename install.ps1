@@ -24,7 +24,7 @@ $Sums = Join-Path $TempDir "SHA256SUMS"
 
 try {
     New-Item -ItemType Directory -Path $TempDir -Force | Out-Null
-    Write-Host "Downloading Personal AI Brain $Version for windows/amd64..."
+    Write-Host "Downloading Noevyra $Version for windows/amd64..."
     Invoke-WebRequest -Uri "$BaseUrl/$Asset" -OutFile $Archive
     Invoke-WebRequest -Uri "$BaseUrl/SHA256SUMS" -OutFile $Sums
 
@@ -54,7 +54,7 @@ try {
     Copy-Item -Path $Binary -Destination (Join-Path $InstallDir "brain.exe") -Force
     & (Join-Path $InstallDir "brain.exe") version | Out-Null
 
-    Write-Host "Installed Personal AI Brain $Version to $InstallDir\brain.exe"
+    Write-Host "Installed Noevyra $Version to $InstallDir\brain.exe"
     if (($env:Path -split ';') -notcontains $InstallDir) {
         Write-Host "Add $InstallDir to PATH, then run: brain init"
     }
