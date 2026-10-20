@@ -8,6 +8,28 @@ Local-first CLI + MCP memory gateway for existing coding agents. Keep shared pro
 
 ## Quick start
 
+### Native Go preview
+
+The native implementation ships as a single executable for memory, SQLite FTS5 and MCP. It shares the existing JavaScript database and does not require Node for these operations. JavaScript remains supported while compatibility is verified.
+
+```sh
+go build -o build/brain ./cmd/brain
+./build/brain init
+./build/brain remember "Payment webhooks require idempotency" --type decision
+./build/brain recall payment
+./build/brain mcp-config
+# Optional: install daily local-only maintenance, using a permanent binary path.
+./build/brain init --schedule
+```
+
+Build requires Go >= 1.24; CI pins its toolchain and tests native binaries on five OS/architecture combinations. Downloads are available as development artifacts on successful CI runs; tagged releases publish archives, SHA-256 checksums and automatically generated release notes. See [release instructions](docs/RELEASING.md) and [runtime decision](docs/adr/0001-native-go-runtime.md).
+
+Native `init` only creates the store; `--schedule` is required to register a timer. Scheduled native maintenance is local-only. `brain sync --online` and skills commands explicitly use `npx`, which requires Node and may execute third-party code. Windows scheduling remains manual and file privacy depends on user ACLs.
+
+Native MCP configuration uses the absolute binary path with `args: ["mcp"]`; start it in the intended project's working directory. No performance superiority over Node or Rust is claimed without measurements.
+
+### JavaScript CLI (existing MVP)
+
 Requirements: Node.js >= 22.13 (we recommend 22.20+ for `skills` CLI), macOS or Linux. Windows is usable manually but scheduled setup is not yet implemented.
 
 ```bash

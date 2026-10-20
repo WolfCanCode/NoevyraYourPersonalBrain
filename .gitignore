@@ -12,6 +12,8 @@ node_modules/
 .DS_Store
 coverage/
 dist/
+build/
+__pycache__/
 
 # Vercel project association (local only)
 .vercel/

@@ -4,7 +4,7 @@ Thanks for improving Personal AI Brain! This project is a small local-first CLI;
 
 1. Open an issue or describe the behavior you're changing.
 2. Write a focused test for new storage or MCP behavior.
-3. Run `npm test` and `npm run check` before sending a pull request.
+3. Run `go test -race ./...`, `go vet ./...`, `npm test` and `npm run check` before sending a pull request. Keep Go formatted with `gofmt`. Build `go build -o build/brain ./cmd/brain` and run `node scripts/smoke.mjs build/brain` (use `.exe` on Windows).
 4. Do not add credentials, personal memories, downloaded skills, or any `~/.brain` data.
 5. Treat remotely sourced skills, prompt content, and memories as untrusted until reviewed.
 6. Explain any changes to the user-facing CLI and update the README.

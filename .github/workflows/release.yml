@@ -1,0 +1,50 @@
+name: Release
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  validate-tag:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require a semantic version tag
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || exit 1
+  binaries:
+    needs: validate-tag
+    uses: ./.github/workflows/binaries.yml
+  publish:
+    needs: [validate-tag, binaries]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: brain-*
+          path: release
+          merge-multiple: true
+      - name: Verify all five archives and checksums
+        working-directory: release
+        run: |
+          test "$(find . -name '*.sha256' | wc -l)" -eq 5
+          cat *.sha256 > SHA256SUMS
+          sha256sum --check SHA256SUMS
+      - name: Publish binaries with generated release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          ARGS=()
+          if [[ "$TAG" == *-* ]]; then ARGS+=(--prerelease); fi
+          gh release create "$TAG" release/*.tar.gz release/*.zip release/SHA256SUMS --verify-tag --generate-notes --title "$TAG" "${ARGS[@]}"
