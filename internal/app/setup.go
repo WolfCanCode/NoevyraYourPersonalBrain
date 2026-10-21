@@ -128,7 +128,8 @@ func buildSessionEvent(results []intelligence.ProvisionResult) map[string]any {
 
 // runSetup is the handler for the "brain setup" CLI command.
 // Flags: --refresh (skip overwrite prompt), --dry-run (print plan, write nothing),
-//        --status (display stored profile, exit).
+//
+//	--status (display stored profile, exit).
 func runSetup(store *memory.Store, project memory.Project, args []string, in io.Reader, out, errOut io.Writer, home string) error {
 	pos, f, err := flags(args, nil, []string{"--refresh", "--dry-run", "--status"})
 	if err != nil {

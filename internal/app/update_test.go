@@ -8,9 +8,9 @@ import (
 
 func TestParseSemver(t *testing.T) {
 	cases := []struct {
-		in             string
-		maj, min, pat  int
-		ok             bool
+		in            string
+		maj, min, pat int
+		ok            bool
 	}{
 		{"v0.3.0", 0, 3, 0, true},
 		{"v1.2.3", 1, 2, 3, true},

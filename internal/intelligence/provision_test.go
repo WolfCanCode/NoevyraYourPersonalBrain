@@ -39,11 +39,21 @@ func TestProfileSerializationRoundTrip(t *testing.T) {
 		}
 		// Normalize nil vs empty slices before comparison.
 		normalizeProfile := func(p *ProjectProfile) {
-			if p.Languages == nil { p.Languages = []string{} }
-			if p.Stacks == nil { p.Stacks = []string{} }
-			if p.Signals == nil { p.Signals = []string{} }
-			if p.Manifests == nil { p.Manifests = []string{} }
-			if p.Counts == nil { p.Counts = map[string]int{} }
+			if p.Languages == nil {
+				p.Languages = []string{}
+			}
+			if p.Stacks == nil {
+				p.Stacks = []string{}
+			}
+			if p.Signals == nil {
+				p.Signals = []string{}
+			}
+			if p.Manifests == nil {
+				p.Manifests = []string{}
+			}
+			if p.Counts == nil {
+				p.Counts = map[string]int{}
+			}
 		}
 		normalizeProfile(&profile)
 		normalizeProfile(&got)

@@ -31,13 +31,13 @@ type MCPServerDef struct {
 // (discovery + provisioning) and brain advise (Compile recommendations).
 // It replaces the unexported capability type formerly in compiler.go.
 type ProvisionableCapability struct {
-	Kind           string        `json:"kind"`            // "mcp" | "skill" | "cli"
-	Ref            string        `json:"ref"`             // stable short identifier
-	Name           string        `json:"name"`            // human display name
-	Reason         string        `json:"reason"`          // one-line reason (used by Compile)
-	Description    string        `json:"description"`     // extended description (used by setup)
-	Confidence     float64       `json:"confidence"`      // 0.0–1.0 base confidence score
-	TriggerSignals []string      `json:"triggerSignals"`  // matched against profile terms
+	Kind           string        `json:"kind"`           // "mcp" | "skill" | "cli"
+	Ref            string        `json:"ref"`            // stable short identifier
+	Name           string        `json:"name"`           // human display name
+	Reason         string        `json:"reason"`         // one-line reason (used by Compile)
+	Description    string        `json:"description"`    // extended description (used by setup)
+	Confidence     float64       `json:"confidence"`     // 0.0–1.0 base confidence score
+	TriggerSignals []string      `json:"triggerSignals"` // matched against profile terms
 	Network        NetworkReq    `json:"network"`
 	MCPServer      *MCPServerDef `json:"mcpServer,omitempty"`    // kind == "mcp"
 	SkillKeyword   string        `json:"skillKeyword,omitempty"` // kind == "skill"
