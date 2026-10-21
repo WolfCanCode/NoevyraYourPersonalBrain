@@ -17,7 +17,7 @@ var embeddedSkillsIndex []byte
 // minExpectedSkills is the minimum number of catalog items expected after a
 // correct seed. If fewer exist the seed is considered malformed and re-runs.
 // One giant "Overview" chunk from a failed JSON parse would be caught here.
-const minExpectedSkills = 500
+const minExpectedSkills = 2000 // 2,737 skills expected; anything less triggers re-seed
 
 // SeedEmbeddedCatalog imports the bundled AAS skills_index.json into the local
 // SQLite store when no catalog entries exist, or when the existing count is

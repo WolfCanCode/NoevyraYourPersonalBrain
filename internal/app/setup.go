@@ -354,7 +354,7 @@ func setupKeywords(profile intelligence.ProjectProfile) []string {
 }
 
 func searchCatalogSkills(profile intelligence.ProjectProfile, store *memory.Store, seen map[string]bool, out, errOut io.Writer, skipLive bool) []skillGroup {
-	const perKeyword = 5
+	const perKeyword = 8
 	keywords := setupKeywords(profile)
 	if len(keywords) == 0 {
 		return nil

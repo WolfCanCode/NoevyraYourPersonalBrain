@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"html"
@@ -152,10 +153,59 @@ func cleanRemoteText(value string) string {
 
 type sourceChunk struct{ title, content string }
 
+// chunksFromSkillsIndex parses the AAS skills_index.json format (a JSON array
+// of skill objects) into one sourceChunk per skill so that each skill is
+// individually FTS5-searchable by title, description, category, and tags.
+func chunksFromSkillsIndex(data []byte) []sourceChunk {
+	var skills []struct {
+		ID          string   `json:"id"`
+		Name        string   `json:"name"`
+		Description string   `json:"description"`
+		Category    string   `json:"category"`
+		Tags        []string `json:"tags"`
+		Risk        string   `json:"risk"`
+	}
+	if err := json.Unmarshal(data, &skills); err != nil {
+		return nil
+	}
+	result := make([]sourceChunk, 0, len(skills))
+	for _, s := range skills {
+		name := s.Name
+		if name == "" {
+			name = s.ID
+		}
+		if name == "" || s.Description == "" {
+			continue
+		}
+		content := s.Description
+		if s.Category != "" {
+			content += "\ncategory: " + s.Category
+		}
+		if len(s.Tags) > 0 {
+			content += "\ntags: " + strings.Join(s.Tags, ", ")
+		}
+		if s.Risk != "" && s.Risk != "none" {
+			content += "\nrisk: " + s.Risk
+		}
+		result = append(result, sourceChunk{name, content})
+	}
+	return result
+}
+
 func chunks(value string) []sourceChunk {
 	value = cleanRemoteText(value)
 	if value == "" {
 		return nil
+	}
+	// Detect AAS skills_index.json: a JSON array of skill objects.
+	// Route to the dedicated per-skill chunker instead of the markdown chunker.
+	trimmed := strings.TrimSpace(value)
+	if strings.HasPrefix(trimmed, "[") &&
+		strings.Contains(trimmed, `"description"`) &&
+		strings.Contains(trimmed, `"category"`) {
+		if result := chunksFromSkillsIndex([]byte(trimmed)); len(result) > 0 {
+			return result
+		}
 	}
 	result := []sourceChunk{}
 	title := "Overview"
