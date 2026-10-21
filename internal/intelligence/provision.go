@@ -150,6 +150,10 @@ func DefaultAgentConfigPaths() (AgentConfigPaths, error) {
 		"codex":  filepath.Join(home, ".codex", "config.json"),
 		"cursor": filepath.Join(home, ".cursor", "mcp.json"),
 		"kiro":   filepath.Join(home, ".kiro", "settings", "mcp.json"),
+		// OpenCode uses opencode.json with a different envelope: {"mcp":{"brain":{...}}}
+		// Pi (pi.dev) follows the same mcpServers convention as Claude/Codex.
+		"opencode": filepath.Join(home, ".config", "opencode", "opencode.json"),
+		"pi":       filepath.Join(home, ".config", "pi", "mcp.json"),
 	}}, nil
 }
 
@@ -246,7 +250,13 @@ func provisionMCP(cap ProvisionableCapability, agentPaths AgentConfigPaths, dryR
 			provisioned++
 			continue
 		}
-		if wErr := writeMCPEntry(cfgPath, "brain", entry); wErr != nil {
+		var wErr error
+		if isOpenCodeAgent(agent) {
+			wErr = writeOpenCodeMCPEntry(cfgPath, "brain", entry)
+		} else {
+			wErr = writeMCPEntry(cfgPath, "brain", entry)
+		}
+		if wErr != nil {
 			return ProvisionResult{Capability: cap, Outcome: OutcomeFailed, Error: "failed to write MCP config for " + agent + ": " + wErr.Error()}
 		}
 		provisioned++
@@ -262,6 +272,12 @@ func agentBinary(agent string) string {
 		return "cursor-agent"
 	}
 	return agent
+}
+
+// isOpenCodeAgent returns true for agents that use the opencode.json MCP envelope
+// {"mcp": {"name": {...}}} instead of the standard {"mcpServers": {"name": {...}}}.
+func isOpenCodeAgent(agent string) bool {
+	return agent == "opencode"
 }
 
 func provisionSkill(cap ProvisionableCapability, store *memory.Store, dryRun bool, in io.Reader, out io.Writer) ProvisionResult {
@@ -346,4 +362,63 @@ func writeMCPEntry(path, serverName string, entry MCPServerDef) error {
 // WriteMCPEntry is the exported variant used by tests.
 func WriteMCPEntry(path, serverName string, entry MCPServerDef) error {
 	return writeMCPEntry(path, serverName, entry)
+}
+
+// writeOpenCodeMCPEntry writes into the opencode.json "mcp" envelope,
+// which uses {"type":"local","command":[...]} instead of {"command":"...","args":[...]}.
+func writeOpenCodeMCPEntry(path, serverName string, entry MCPServerDef) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+		return err
+	}
+	top := map[string]json.RawMessage{}
+	if data, err := os.ReadFile(path); err == nil && len(data) > 0 {
+		_ = json.Unmarshal(data, &top)
+	}
+	servers := map[string]json.RawMessage{}
+	if raw, ok := top["mcp"]; ok {
+		_ = json.Unmarshal(raw, &servers)
+	}
+	// OpenCode format: {"type":"local","command":["binary","arg"],"enabled":true}
+	cmd := append([]string{entry.Command}, entry.Args...)
+	entryBytes, err := json.Marshal(map[string]any{
+		"type":    "local",
+		"command": cmd,
+		"enabled": true,
+	})
+	if err != nil {
+		return err
+	}
+	servers[serverName] = entryBytes
+	serversBytes, err := json.Marshal(servers)
+	if err != nil {
+		return err
+	}
+	top["mcp"] = serversBytes
+	// Preserve $schema if already set, or add it.
+	if _, ok := top["$schema"]; !ok {
+		schema, _ := json.Marshal("https://opencode.ai/config.json")
+		top["$schema"] = schema
+	}
+	out, err := json.MarshalIndent(top, "", "  ")
+	if err != nil {
+		return err
+	}
+	tmp, err := os.CreateTemp(filepath.Dir(path), ".brain-mcp-*.tmp")
+	if err != nil {
+		return err
+	}
+	tmpName := tmp.Name()
+	defer func() {
+		if _, e := os.Stat(tmpName); e == nil {
+			os.Remove(tmpName)
+		}
+	}()
+	if _, err = tmp.Write(append(out, '\n')); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err = tmp.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmpName, path)
 }

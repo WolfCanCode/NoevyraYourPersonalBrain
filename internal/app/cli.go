@@ -42,8 +42,8 @@ var helpGroups = []struct {
 		{"brain feedback <id> --outcome …", "Record pack usefulness · adjusts future ranking"},
 	}},
 	{"Setup & Agents", []helpEntry{
-		{"brain setup [--refresh|--dry-run|--status]", "Detect stack, discover skills, provision capabilities"},
-		{"brain run claude|codex|cursor|kiro", "Launch agent with compiled context pack"},
+		{"brain setup [--refresh|--dry-run|--status]", "Detect stack, provision capabilities, write agent steering files"},
+		{"brain run claude|codex|cursor|kiro|opencode|pi", "Launch agent with compiled context pack"},
 	}},
 	{"Sources & Skills", []helpEntry{
 		{"brain sources seed|add|list|sync", "Manage explicitly trusted knowledge sources"},
@@ -184,7 +184,7 @@ func Run(args []string, version, commit, builtAt string, in io.Reader, out, errO
 	}
 	if cmd == "doctor" {
 		commands := map[string]bool{}
-		for _, bin := range []string{"git", "claude", "codex", "cursor-agent", "kiro", "npx"} {
+		for _, bin := range []string{"git", "claude", "codex", "cursor-agent", "kiro", "opencode", "pi", "npx"} {
 			_, e := exec.LookPath(bin)
 			commands[bin] = e == nil
 		}
@@ -198,7 +198,7 @@ func Run(args []string, version, commit, builtAt string, in io.Reader, out, errO
 			fmt.Println()
 			printSectionLabel("Tools")
 			fmt.Println()
-			for _, bin := range []string{"git", "claude", "codex", "cursor-agent", "kiro", "npx"} {
+			for _, bin := range []string{"git", "claude", "codex", "cursor-agent", "kiro", "opencode", "pi", "npx"} {
 				ok := commands[bin]
 				fmt.Printf("  %s  %s\n", checkBadge(ok), styleWhite.Render(bin))
 			}
@@ -598,9 +598,9 @@ func skills(s *memory.Store, args []string, out io.Writer) error {
 	return errors.New("use skills find|trust|list")
 }
 func runAgent(s *memory.Store, p memory.Project, args []string, in io.Reader, out, errOut io.Writer, home string) error {
-	binaries := map[string]string{"claude": "claude", "codex": "codex", "cursor": "cursor-agent", "kiro": "kiro"}
+	binaries := map[string]string{"claude": "claude", "codex": "codex", "cursor": "cursor-agent", "kiro": "kiro", "opencode": "opencode", "pi": "pi"}
 	if len(args) == 0 || binaries[args[0]] == "" {
-		return errors.New("use brain run claude|codex|cursor|kiro [task]")
+		return errors.New("use brain run claude|codex|cursor|kiro|opencode|pi [task]")
 	}
 	agentBin := binaries[args[0]]
 	if _, lookErr := exec.LookPath(agentBin); lookErr != nil {

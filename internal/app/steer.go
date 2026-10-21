@@ -110,6 +110,23 @@ alwaysApply: true
 		globalFile:  ".kiro/steering/brain.md",
 		header:      "# Noevyra brain integration\n",
 	},
+	// OpenCode uses AGENTS.md (same as Codex for project-level; the existing-content
+	// check avoids duplicates when both are installed).
+	{
+		name:        "OpenCode",
+		binary:      "opencode",
+		projectFile: "AGENTS.md",
+		globalFile:  ".config/opencode/AGENTS.md",
+		header:      "# Noevyra brain integration\n",
+	},
+	// Pi (pi.dev coding agent — @mariozechner/pi-coding-agent) also uses AGENTS.md.
+	{
+		name:        "Pi",
+		binary:      "pi",
+		projectFile: "AGENTS.md",
+		globalFile:  ".config/pi/AGENTS.md",
+		header:      "# Noevyra brain integration\n",
+	},
 }
 
 // runSteer implements "brain steer".
