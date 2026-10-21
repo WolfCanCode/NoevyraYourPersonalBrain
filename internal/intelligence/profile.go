@@ -144,17 +144,17 @@ var nodeFrameworks = []struct {
 	signal  string
 	markers []string
 }{
-	{"angular",   []string{"@angular/core", "@angular/common"}},
-	{"react",     []string{"react", "react-dom", "react-native"}},
-	{"vue",       []string{"vue", "@vue/core", "nuxt"}},
-	{"svelte",    []string{"svelte", "@sveltejs/kit"}},
-	{"nextjs",    []string{"next"}},
-	{"nestjs",    []string{"@nestjs/core", "@nestjs/common"}},
-	{"graphql",   []string{"graphql", "@apollo/client", "apollo-server"}},
-	{"e2e",       []string{"cypress", "@playwright/test", "playwright"}},
+	{"angular", []string{"@angular/core", "@angular/common"}},
+	{"react", []string{"react", "react-dom", "react-native"}},
+	{"vue", []string{"vue", "@vue/core", "nuxt"}},
+	{"svelte", []string{"svelte", "@sveltejs/kit"}},
+	{"nextjs", []string{"next"}},
+	{"nestjs", []string{"@nestjs/core", "@nestjs/common"}},
+	{"graphql", []string{"graphql", "@apollo/client", "apollo-server"}},
+	{"e2e", []string{"cypress", "@playwright/test", "playwright"}},
 	{"storybook", []string{"storybook", "@storybook/core", "@storybook/react", "@storybook/angular", "@storybook/vue3"}},
-	{"redux",     []string{"redux", "@reduxjs/toolkit"}},
-	{"tailwind",  []string{"tailwindcss"}},
+	{"redux", []string{"redux", "@reduxjs/toolkit"}},
+	{"tailwind", []string{"tailwindcss"}},
 }
 
 // Profile reads bounded repository metadata. Project contents are signals, not instructions.
