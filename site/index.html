@@ -40,9 +40,13 @@ h1 span{color:var(--accent)}
 .actions{display:flex;gap:12px;flex-wrap:wrap;margin:26px 0 16px}
 .fine{font-size:11px;color:var(--muted);font-family:ui-monospace,monospace}
 /* brand visual */
-.brand-visual{position:relative;display:grid;place-items:center}
-.hero-logo{display:block;width:min(100%,500px);aspect-ratio:1;border-radius:16px;border:1px solid #3b3544;box-shadow:0 24px 80px #0009;object-fit:cover}
-.brand-visual::after{content:"LOCAL · PRIVATE · PORTABLE";position:absolute;bottom:16px;padding:6px 12px;border:1px solid #ffffff22;border-radius:100px;background:#07090dcc;color:#c9d9f3;font:10px ui-monospace,monospace;letter-spacing:1.5px}
+.brand-visual{display:flex;flex-direction:column;align-items:center;gap:16px}
+.hero-logo{display:block;width:min(100%,272px);aspect-ratio:1;border-radius:20px;border:1px solid #3b3544;box-shadow:0 0 52px rgba(199,180,255,.13),0 16px 48px #0009;object-fit:cover;object-position:center 8%}
+.hero-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:272px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:13px 14px;text-align:center}
+.stat-value{font:700 20px/1 system-ui;color:var(--text);letter-spacing:-.5px}
+.stat-value.accent{color:var(--accent)}
+.stat-label{font:11px/1 ui-monospace,monospace;color:var(--muted);margin-top:5px;display:block}
 /* strip */
 .strip{display:flex;justify-content:space-between;gap:16px;padding:20px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);font:11px ui-monospace,monospace;color:var(--muted)}
 .strip b{color:var(--text)}
