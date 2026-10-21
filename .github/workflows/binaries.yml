@@ -1,6 +1,12 @@
 name: Tested native binaries
 on:
   workflow_call:
+    inputs:
+      version:
+        description: 'Version to embed (e.g. v0.4.0); falls back to GITHUB_REF for tag-triggered builds'
+        type: string
+        required: false
+        default: ''
 permissions:
   contents: read
 jobs:
@@ -74,8 +80,13 @@ jobs:
         run: |
           test "$(go env GOOS)" = "$TARGET_OS"
           test "$(go env GOARCH)" = "$TARGET_ARCH"
-          VERSION="dev-${GITHUB_SHA:0:12}"
-          if [[ "$GITHUB_REF" == refs/tags/* ]]; then VERSION="${GITHUB_REF#refs/tags/}"; fi
+          if [[ -n "${{ inputs.version }}" ]]; then
+            VERSION="${{ inputs.version }}"
+          elif [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/}"
+          else
+            VERSION="dev-${GITHUB_SHA:0:12}"
+          fi
           echo "BRAIN_VERSION=$VERSION" >> "$GITHUB_ENV"
           mkdir -p build
           go build -mod=readonly -trimpath -ldflags "-s -w -X main.version=$VERSION -X main.commit=$GITHUB_SHA -X main.builtAt=$(date -u +%Y-%m-%dT%H:%M:%SZ)" -o "build/brain$EXT" ./cmd/brain
