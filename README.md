@@ -10,6 +10,8 @@
 
 Noevyra is a local-first thinking layer for coding agents. It remembers reviewed decisions, understands the current project, pulls relevant best practices and hands any agent a compact, tool-aware starting point—without locking that knowledge inside one model or chat.
 
+Noevyra does not try to become another code-graph engine. When deep impact analysis is worth its cost, a future optional provider can supply bounded structural facts; Noevyra remains responsible for deciding whether those facts matter now. The core stays useful and fully functional without a graph provider. See [ADR 0003](docs/adr/0003-external-structural-intelligence.md).
+
 > **Status: v0.2.1 released** with deterministic project profiling, opted-in daily trusted-source refresh, token-budgeted context compilation, explainable capability recommendations and feedback-weighted ranking. Noevyra is not an autonomous agent and does not execute remote instructions.
 
 ## Why this exists
@@ -233,6 +235,8 @@ Landing page: [`site/index.html`](site/index.html), deploy as a static site. No 
 - [ ] Session capture adapters and automatic outcome extraction
 - [ ] Project identity handshake across MCP clients
 - [ ] Skill version pinning and validated upgrades
+- [ ] Reviewed capability-provider registry (recommendation only; no execution)
+- [ ] Optional structural-provider adapters, gated by benchmarks and explicit trust
 - [ ] Cross-device sync with single authoritative writer
 - [ ] Context quality benchmarks and self-improvement evaluation
 
