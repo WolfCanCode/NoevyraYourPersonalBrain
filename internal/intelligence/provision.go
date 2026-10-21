@@ -79,8 +79,8 @@ var ProvisionCatalog = []ProvisionableCapability{
 	{
 		Kind: "mcp", Ref: "documentation", Name: "Documentation MCP", Confidence: 0.85, Network: NetworkNetwork,
 		Reason:         "Retrieve current primary documentation instead of loading broad or stale framework knowledge.",
-		Description:    "Fetch live primary-source docs for Go, Rust, Python, TypeScript, JavaScript, and more.",
-		TriggerSignals: []string{"go", "rust", "python", "typescript", "javascript", "api"},
+		Description:    "Fetch live primary-source docs for your detected stack — Go, Rust, Python, Angular, React, Vue, and more.",
+		TriggerSignals: []string{"go", "rust", "python", "typescript", "javascript", "api", "angular", "react", "vue", "nextjs", "nestjs", "graphql"},
 	},
 	{
 		Kind: "mcp", Ref: "database", Name: "Database MCP", Confidence: 0.85, Network: NetworkNetwork,
@@ -92,7 +92,7 @@ var ProvisionCatalog = []ProvisionableCapability{
 		Kind: "mcp", Ref: "browser", Name: "Browser MCP", Confidence: 0.82, Network: NetworkNetwork,
 		Reason:         "Verify browser behavior and UI state instead of reasoning from screenshots or assumptions.",
 		Description:    "Control a real browser to verify frontend behavior, forms, and navigation.",
-		TriggerSignals: []string{"web", "frontend", "ui", "e2e", "playwright", "javascript", "typescript"},
+		TriggerSignals: []string{"web", "frontend", "ui", "e2e", "playwright", "angular", "react", "vue", "nextjs", "svelte"},
 	},
 	{
 		Kind: "skill", Ref: "security-review", Name: "Security Review Skill", Confidence: 0.82, Network: NetworkNetwork,
@@ -105,7 +105,7 @@ var ProvisionCatalog = []ProvisionableCapability{
 		Kind: "mcp", Ref: "figma", Name: "Figma MCP", Confidence: 0.78, Network: NetworkNetwork,
 		Reason:         "Read design structure and tokens when implementation depends on a Figma source of truth.",
 		Description:    "Access Figma files, components, and design tokens directly.",
-		TriggerSignals: []string{"figma", "design", "ui", "component", "frontend", "web"},
+		TriggerSignals: []string{"figma", "design", "ui", "component", "frontend", "storybook", "angular", "react", "vue"},
 	},
 	{
 		Kind: "skill", Ref: "api-contract", Name: "API Contract Skill", Confidence: 0.75, Network: NetworkLocal,
@@ -125,7 +125,7 @@ var ProvisionCatalog = []ProvisionableCapability{
 		Kind: "skill", Ref: "test-strategy", Name: "Test Strategy Skill", Confidence: 0.70, Network: NetworkLocal,
 		Reason:         "Select the smallest useful unit, integration and end-to-end checks for the change.",
 		Description:    "Choose and structure unit, integration, and E2E tests for the task.",
-		TriggerSignals: []string{"test", "bug", "refactor", "ci", "release", "ci-cd"},
+		TriggerSignals: []string{"test", "bug", "refactor", "ci", "release", "ci-cd", "e2e"},
 		SkillKeyword:   "test",
 	},
 	{
@@ -196,13 +196,15 @@ func DiscoverCapabilities(profile ProjectProfile, trusted []memory.Skill) []Prov
 	return result
 }
 
-// buildTermSet builds a lowercase term set from all profile fields.
+// buildTermSet builds a match set from profile Signals and Languages only.
+// Stacks (raw dependency names from package.json, go.mod, etc.) are excluded
+// because they contain hundreds of entries and cause generic signals like
+// "typescript" to match every web project identically.
+// Framework-level signals (angular, react, vue, e2e, ...) are injected into
+// profile.Signals by the profiler when it detects known framework packages.
 func buildTermSet(profile ProjectProfile) map[string]bool {
 	set := map[string]bool{}
 	for _, v := range profile.Languages {
-		set[strings.ToLower(v)] = true
-	}
-	for _, v := range profile.Stacks {
 		set[strings.ToLower(v)] = true
 	}
 	for _, v := range profile.Signals {

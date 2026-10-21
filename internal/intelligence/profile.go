@@ -90,11 +90,25 @@ func inspectManifest(root, name string, stacks, signals map[string]bool) {
 			DevDependencies map[string]any `json:"devDependencies"`
 		}
 		if json.Unmarshal(b, &pkg) == nil {
+			allDeps := map[string]bool{}
 			for dep := range pkg.Dependencies {
 				add(stacks, dep)
+				allDeps[strings.ToLower(dep)] = true
 			}
 			for dep := range pkg.DevDependencies {
 				add(stacks, dep)
+				allDeps[strings.ToLower(dep)] = true
+			}
+			// Promote framework-level signals from known dependency markers so that
+			// brain setup can suggest project-specific capabilities rather than
+			// generic recommendations for every TypeScript project.
+			for _, fw := range nodeFrameworks {
+				for _, marker := range fw.markers {
+					if allDeps[marker] {
+						add(signals, fw.signal)
+						break
+					}
+				}
 			}
 		}
 		add(signals, "node")
@@ -122,6 +136,25 @@ func inspectManifest(root, name string, stacks, signals map[string]bool) {
 			add(stacks, "spring")
 		}
 	}
+}
+
+// nodeFrameworks maps a semantic signal name to the npm package names that imply it.
+// Only packages that unambiguously identify a framework are listed to avoid false positives.
+var nodeFrameworks = []struct {
+	signal  string
+	markers []string
+}{
+	{"angular",   []string{"@angular/core", "@angular/common"}},
+	{"react",     []string{"react", "react-dom", "react-native"}},
+	{"vue",       []string{"vue", "@vue/core", "nuxt"}},
+	{"svelte",    []string{"svelte", "@sveltejs/kit"}},
+	{"nextjs",    []string{"next"}},
+	{"nestjs",    []string{"@nestjs/core", "@nestjs/common"}},
+	{"graphql",   []string{"graphql", "@apollo/client", "apollo-server"}},
+	{"e2e",       []string{"cypress", "@playwright/test", "playwright"}},
+	{"storybook", []string{"storybook", "@storybook/core", "@storybook/react", "@storybook/angular", "@storybook/vue3"}},
+	{"redux",     []string{"redux", "@reduxjs/toolkit"}},
+	{"tailwind",  []string{"tailwindcss"}},
 }
 
 // Profile reads bounded repository metadata. Project contents are signals, not instructions.
