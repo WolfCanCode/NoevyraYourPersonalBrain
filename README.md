@@ -8,44 +8,27 @@
 
 > **Your model is not the bottleneck. Rebuilding the same context is.**
 
-Noevyra is a local-first thinking layer for coding agents. It remembers reviewed decisions, understands the current project, pulls relevant best practices and hands any agent a compact, tool-aware starting point—without locking that knowledge inside one model or chat.
+Noevyra is a local-first thinking layer for coding agents. Run `brain setup` once in any project — it detects your stack, provisions the right skills and MCPs, and persists a profile your agents can share. Switch between Claude, Codex, Cursor, or Kiro and the brain travels with you.
 
-Noevyra does not try to become another code-graph engine. When deep impact analysis is worth its cost, a future optional provider can supply bounded structural facts; Noevyra remains responsible for deciding whether those facts matter now. The core stays useful and fully functional without a graph provider. See [ADR 0003](docs/adr/0003-external-structural-intelligence.md).
+> **Status: v0.3.0** · auto-project setup · persistent profiles · Kiro support · self-update  
+> Single Go binary · SQLite FTS5 · MCP stdio · MIT
 
-> **Status: v0.3.0 released** with auto-project setup (`brain setup`), persistent project profiles, capability provisioning, Kiro agent support, and a self-update command (`brain update`). Noevyra is not an autonomous agent and does not execute remote instructions.
+## The problem
 
-## Why this exists
+Every new chat, agent switch, or compacted session starts cold. The agent rescans the repository, re-reads docs it already read, rebuilds decisions you already made, and burns tokens on context you already paid for.
 
-Coding agents are capable, but they repeatedly start **cold**. A new chat, a different agent, or a compacted session often means explaining the same architecture, decisions, constraints and preferred workflow again. The agent then rereads the repository, searches broad documentation, guesses which tools fit and consumes tokens rebuilding context you already paid for. **You should not have to pay—in time or tokens—for the same understanding twice.**
+| Pain | Brain's answer |
+|---|---|
+| Every session starts cold | Persists verified decisions and project profile in local SQLite |
+| Giant prompts burn tokens | Ranks, deduplicates and truncates evidence to an explicit token budget |
+| Stale docs and unclear provenance | Refreshes only explicitly trusted sources; keeps URL, hash and freshness metadata |
+| Tool selection is guesswork | Matches project signals to skills/MCPs/CLIs and explains every recommendation |
+| Context is locked inside one agent | Exposes the same brain to Claude, Codex, Cursor and Kiro through CLI and MCP |
+| Setup repeats for every project | `brain setup` detects stack, provisions capabilities, stores the profile once |
 
-A normal task without Brain often looks like this:
+## Install
 
-1. Re-explain the project and paste old decisions.
-2. Point the agent at several docs and hope they are still current.
-3. Let each agent rediscover the stack, risks and useful tools independently.
-4. Send a large prompt “just in case,” even though most of it is irrelevant.
-5. Lose that work when you switch from Claude to Codex, Cursor, or a new session.
-
-Brain moves that repeated preparation into one local, inspectable layer. It profiles the current project, recalls verified decisions, retrieves relevant fragments from sources you chose, and returns a compact plan with risks, verification gates and explainable skill/MCP/CLI suggestions. Any agent can consume the same pack through the CLI or MCP.
-
-| Everyday pain | What Brain does | Practical result |
-| --- | --- | --- |
-| Every session starts without project history | Keeps verified personal and project memory in local SQLite | Less re-explaining and fewer contradictory decisions |
-| Agents reread too much or receive giant prompts | Ranks, deduplicates and truncates evidence to an explicit token budget | Smaller prompts with the useful context first |
-| Best-practice advice becomes stale or has unclear provenance | Refreshes only explicitly trusted sources and keeps URL, hash and freshness metadata | Advice is attributable, reviewable and cheaper to refresh |
-| Choosing a skill, MCP or CLI is guesswork | Matches project/task signals and explains every recommendation | Less tool hunting; no silent installs or trust changes |
-| Useful context is trapped inside one vendor or chat | Exposes the same brain through a native CLI and stdio MCP | Switch agents without rebuilding the thinking layer |
-| Feedback disappears after the task | Records pack outcomes and adjusts bounded retrieval weights | The next pack can spend its token budget more effectively |
-
-For example, asking an agent to “secure the payment webhook” normally triggers another repository scan and another long explanation. With Brain, `brain advise "secure the payment webhook" --budget 512` can hand the agent the detected stack, relevant decisions, attributed security evidence, likely failure modes, verification steps and the tools that fit—all inside a reviewable budget. Brain does not replace the agent; it gives the agent a better starting point.
-
-## Quick start
-
-### Native Go preview
-
-The native implementation ships as a single executable for memory, SQLite FTS5 and MCP. It shares the existing JavaScript database and does not require Node for these operations. JavaScript remains supported while compatibility is verified.
-
-Install the latest tested macOS or Linux release without Go or Node:
+**macOS / Linux** — one command, no Go or Node required:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/WolfCanCode/personal-ai-brain/main/install.sh | sh
@@ -53,7 +36,7 @@ export PATH="$HOME/.local/bin:$PATH"
 brain init
 ```
 
-The installer detects OS/architecture, downloads the matching GitHub Release archive, verifies it against the published `SHA256SUMS`, and installs to `~/.local/bin` without `sudo`. Pin a release with `BRAIN_VERSION=v0.3.0`, or choose a destination with `BRAIN_INSTALL_DIR=/path/to/bin`. On Windows PowerShell:
+**Windows PowerShell:**
 
 ```powershell
 irm https://raw.githubusercontent.com/WolfCanCode/personal-ai-brain/main/install.ps1 | iex
@@ -61,186 +44,181 @@ $env:Path = "$HOME\.local\bin;$env:Path"
 brain init
 ```
 
-Review a remote installer before piping it to a shell when your threat model requires it. Checksums protect the downloaded archive from corruption or mismatch; they are not code-signing signatures.
+The installer downloads the matching release archive, verifies the SHA-256 checksum, and installs to `~/.local/bin`. No root required. → [Full install guide](docs/getting-started.md)
 
-Build from source instead:
+**Already installed? Update in one command:**
+
+```sh
+brain update          # install latest release
+brain update --check  # just check, don't install
+```
+
+**Build from source** (requires Go ≥ 1.26):
 
 ```sh
 go build -o build/brain ./cmd/brain
 ./build/brain init
-./build/brain remember "Payment webhooks require idempotency" --type decision
-./build/brain recall payment
-./build/brain profile
-./build/brain advise "implement a secure payment webhook" --budget 1200
-./build/brain sources seed   # register a reviewable primary-source starter catalog
-./build/brain sources sync   # initial explicit pull
-./build/brain mcp-config
-# Optional: refresh those trusted sources daily, using a permanent binary path.
-./build/brain init --schedule
 ```
 
-Building requires Go >= 1.26; installing a release binary does not. CI pins its toolchain and tests native binaries on five OS/architecture combinations. Downloads are available as development artifacts on successful CI runs; tagged releases publish archives, SHA-256 checksums and automatically generated release notes. See [release instructions](docs/RELEASING.md) and [runtime decision](docs/adr/0001-native-go-runtime.md).
+## Quick start
 
-Native `init` only creates the store; `--schedule` is required to register a timer. The timer runs `brain sync --sources`: local maintenance plus network refresh of sources you explicitly registered, without executing `npx` or third-party skill tooling. `brain sync --skills`, the compatibility alias `brain sync --online`, and skills commands require Node and may execute third-party code. Windows scheduling remains manual and file privacy depends on user ACLs.
+```sh
+# 1. Go to any project
+cd ~/projects/my-api
 
-Native MCP configuration uses the absolute binary path with `args: ["mcp"]`; start it in the intended project's working directory. No performance superiority over Node or Rust is claimed without measurements.
+# 2. Detect the stack, discover best-practice skills and MCPs, provision them
+brain setup
 
-### JavaScript CLI (existing MVP)
+# 3. Store a decision
+brain remember "All API responses use camelCase" --type decision
 
-Requirements: Node.js >= 22.13 (we recommend 22.20+ for `skills` CLI), macOS or Linux. Windows is usable manually but scheduled setup is not yet implemented.
-
-```bash
-git clone https://github.com/WolfCanCode/personal-ai-brain.git
-cd personal-ai-brain
-npm link
-brain init
-cd /your/project
-brain remember "We require idempotency for payment webhooks" --type decision
-brain recall "payment"
-brain run claude "Implement payment webhook"
+# 4. Launch any agent with a ready-made context pack
+brain run kiro "Add rate limiting to the payments endpoint"
+brain run claude "Add rate limiting to the payments endpoint"
 ```
 
-`npm link` installs the `brain` executable on your machine; the package does not depend on any cloud service or LLM provider. The CLI uses `node:sqlite` and `fts5` built into Node 22; Node 22 may print an experimental warning when opening SQLite. No dependencies or Docker required.
+On the next session — or after switching from Claude to Kiro — the profile is already there. No re-setup.
 
 ## Commands
 
-| Command | Function |
-| --- | --- |
+| Command | What it does |
+|---|---|
 | `brain init` | Create `~/.brain/brain.sqlite` |
-| `brain init --schedule` | Install daily local maintenance and trusted-source refresh |
-| `brain remember "..." --type decision` | Store a user-approved project memory |
-| `brain remember "..." --scope personal` | Store personal memory available to any project |
-| `brain recall "payment"` | Search relevant verified memory |
-| `brain context "build payment API"` | Generate task context pack |
-| `brain profile` | Detect languages, stacks and operational signals from bounded project evidence |
-| `brain advise "task" --budget 1200` | Compile memories, external knowledge and capability recommendations to a token budget |
-| `brain feedback <pack-id> --outcome helpful` | Feed a pack outcome back into bounded knowledge ranking |
-| `brain sources add URL --name NAME --tags ...` | Explicitly trust a text/Markdown knowledge source |
-| `brain sources seed` | Register the bundled Go, OWASP and MCP primary-source starter catalog |
-| `brain sources sync` | Pull registered sources with provenance, limits and conditional requests |
-| `brain approve <id>` | Promote an agent-proposed candidate to verified |
-| `brain run claude "task"` | Launch Claude CLI with private context file |
-| `brain run codex "task"` | Launch Codex CLI with the same brain |
-| `brain run cursor "task"` | Launch `cursor-agent` with the same brain |
-| `brain skills find "react"` | Find skills from skills.sh (network / npx required) |
-| `brain skills trust owner/repo@skill --keyword react` | Approve a reviewed skill for matching tasks |
+| `brain init --schedule` | Register daily trusted-source refresh (macOS / Linux) |
+| `brain setup` | Detect project, discover capabilities, provision, store profile |
+| `brain setup --status` | Show stored profile for the current project |
+| `brain setup --refresh` | Re-run detection and update the stored profile |
+| `brain setup --dry-run` | Preview what would be detected and provisioned |
+| `brain remember "…" --type decision` | Store a verified project memory |
+| `brain remember "…" --scope personal` | Store a personal memory across all projects |
+| `brain recall "query"` | Search verified memories |
+| `brain context "task"` | Generate a simple context pack |
+| `brain advise "task" --budget 1200` | Compile full intelligence pack (profile + memories + evidence + recommendations) |
+| `brain feedback <pack-id> --outcome helpful` | Feed outcome back into knowledge ranking |
+| `brain profile` | Detect and print project stack (read-only) |
+| `brain run claude "task"` | Launch Claude with private context file |
+| `brain run codex "task"` | Launch Codex with private context file |
+| `brain run cursor "task"` | Launch Cursor with private context file |
+| `brain run kiro "task"` | Launch Kiro with private context file |
+| `brain sources add URL --name NAME` | Trust an external Markdown/text knowledge source |
+| `brain sources seed` | Register the bundled Go, OWASP, and MCP primary-source catalog |
+| `brain sources sync` | Pull registered sources with provenance and conditional requests |
+| `brain sources list` | List registered sources |
+| `brain skills find "react"` | Discover skills from skills.sh (requires npx) |
+| `brain skills trust owner/repo@skill --keyword react` | Approve a reviewed skill |
 | `brain skills list` | Show approved skills |
-| `brain sync --sources` | Local maintenance plus refresh of explicitly trusted sources |
-| `brain sync --skills` | Local maintenance plus an explicit `npx skills check` |
-| `brain sync --online` | Compatibility alias that runs both online operations |
+| `brain approve <id>` | Promote an agent-proposed memory candidate to verified |
+| `brain sync --sources` | Local maintenance + refresh trusted sources |
+| `brain sync --skills` | Local maintenance + explicit skill check |
 | `brain digest --days 7` | Recent memories and events |
+| `brain update` | Download and install the latest release |
+| `brain update --check` | Report whether a newer release is available |
 | `brain mcp` | Start MCP server over stdio |
 | `brain mcp-config` | Print MCP server configuration JSON |
-| `brain update` | Download and install the latest GitHub Release |
-| `brain update --check` | Report whether a newer release is available |
-| `brain doctor` | Local dependency diagnostics |
+| `brain doctor` | Check prerequisites and stored profile status |
+| `brain status` | Memory counts, scheduler status, knowledge items |
 
-## Connect the MCP gateway
+## MCP integration
 
-Connect once per client (replace paths according to your installation):
-
-```bash
-claude mcp add --scope user brain -- node /ABS/PATH/personal-ai-brain/bin/brain.mjs mcp
-codex mcp add brain -- node /ABS/PATH/personal-ai-brain/bin/brain.mjs mcp
-brain mcp-config  # use JSON for Cursor's MCP config
-```
-
-**Project identity:** The MCP server uses its working directory's Git root to scope project memories. Ensure the client starts the Brain MCP process in the same workspace when relying on project memory. A cross-project project-ID handshake is planned.
-
-### MCP tools
-
-- `brain_context(task, limit?)` — verified context pack for a task.
-- `brain_advise(task, budgetTokens?)` — full token-budgeted intelligence pack with project profile and capability recommendations.
-- `brain_profile()` — bounded stack and project-signal detection.
-- `brain_feedback(packId, outcome, tokensUsed?, notes?)` — outcome signal for future knowledge ranking.
-- `brain_recall(query, limit?)` — verified scoped memory search.
-- `brain_remember(content, type?)` — create a **project-scoped candidate** for review.
-- `brain_finish_task(summary, status, evidence?)` — store a task outcome event.
-- `brain_handoff(objective, completed?, remaining?, evidence?)` — record handoff metadata.
-
-MCP server speaks newline-delimited JSON-RPC over stdio, with no `console.log` on stdout outside protocol. This implementation deliberately supports a small subset of MCP methods; validate with your actual MCP host before depending on interoperability.
-
-## Skills workflow
+Run `brain mcp-config` to get the JSON block for your client, then add it once:
 
 ```bash
-brain skills find "typescript"
-# Review the contents, scripts, and source of the selected skill yourself.
-brain skills trust vercel-labs/agent-skills@web-design-guidelines --keyword design
-brain run claude "design a new product landing page"
+# Claude
+claude mcp add --scope user brain -- /path/to/brain mcp
+
+# Kiro — paste brain mcp-config output into ~/.kiro/settings/mcp.json
+
+# Cursor / Codex — use the JSON from brain mcp-config
 ```
 
-The wrapper matches trusted skills by case-insensitive keyword and loads their prompt via `npx skills use`. **Untrusted skills are never auto-installed or silently trusted.** Skill loading depends on the current version of the external `skills` CLI; network access may be necessary. The initial MVP does **not** auto-recommend or install a newly discovered skill when no trusted match exists. `brain skills find` is an explicit discovery command.
+**MCP tools available to agents:**
 
-## Daily updates
+| Tool | Purpose |
+|---|---|
+| `brain_advise(task, budgetTokens?)` | Full intelligence pack — profile, memories, evidence, capability recommendations |
+| `brain_profile()` | Project stack detection |
+| `brain_context(task, limit?)` | Verified memories for a task |
+| `brain_recall(query, limit?)` | Memory search |
+| `brain_remember(content, type?)` | Propose a project memory for user review |
+| `brain_feedback(packId, outcome, tokensUsed?)` | Record pack outcome for quality ranking |
+| `brain_finish_task(summary, status, evidence?)` | Log task outcome |
+| `brain_handoff(objective, completed?, remaining?)` | Record structured handoff between agents |
 
-After registering the sources you trust, `brain init --schedule` registers a daily job at **08:00 local time**:
-
-- macOS: user `launchd` LaunchAgent
-- Linux: user `systemd` timer with `Persistent=true` (missed runs are recovered)
-- Windows: manual `brain sync --sources` for now
-
-The job expires memories with elapsed `expires_at`, records a digest event, and conditionally fetches only explicitly registered HTTPS sources. Conditional requests avoid downloading unchanged documents. Remote content stays inert, attributed evidence; it cannot rewrite memory, install skills, run commands or train a model. Skill checking remains a separate explicit `brain sync --skills` action. It does not yet recover missed runs on macOS beyond the scheduler's normal behavior.
+→ [Full MCP guide](docs/mcp.md)
 
 ## Architecture
 
 ```mermaid
 flowchart TD
-    A["Claude · Codex · Cursor · any MCP agent"] --> B{"Brain interface"}
-    B -->|CLI| C["Private context pack"]
-    B -->|MCP stdio| D["Memory + advice API"]
-    C --> E["Local SQLite brain"]
+    A["Claude · Codex · Cursor · Kiro · any MCP agent"] --> B{"Brain interface"}
+    B -->|"brain run / brain setup"| C["CLI layer\ninternal/app"]
+    B -->|"brain mcp"| D["MCP stdio adapter\ninternal/app/mcp.go"]
+    C --> E["Intelligence layer\ninternal/intelligence"]
     D --> E
-    E --> F["Memory · knowledge · packs · feedback · trusted skills"]
-    F --> G["Project profiler · context compiler · capability router"]
-    H["Explicitly trusted sources"] -->|Daily conditional refresh| F
+    E --> F["Memory layer\ninternal/memory"]
+    F --> G[("brain.sqlite\nWAL · FTS5")]
+    E --> H["Project profiler\nprofile.go"]
+    E --> I["Context compiler\ncompiler.go"]
+    E --> J["Provision catalog\nprovision.go"]
+    J --> K["Agent config files\n~/.claude.json\n~/.kiro/settings/mcp.json\n..."]
+    L["Explicitly trusted sources"] -->|"Daily conditional refresh"| F
 ```
 
-GitHub contains **public application source**, not private memories. Do not add local databases, secrets, context packs or API keys to commits. The `.gitignore` covers standard local files; still review changes before committing.
+→ [Architecture docs](docs/ARCHITECTURE.md)
 
-## Security and caveats
+## Security
 
-- User-origin CLI memories are verified; agent-origin memories require explicit approval.
-- Memory should be treated as untrusted reference, never as higher-priority instructions.
-- Scope checks cover project or personal memory, but this is a single-user local tool, not a multi-tenant authorization boundary.
-- Skill trust does not sandbox its scripts: only trust and use skills after reviewing them.
-- Agent launch wrapper creates a `0600` temporary context file and removes it when the child process exits.
-- Private SQLite data lives in `~/.brain` (directory `0700`, database `0600`). Backups must be protected separately.
-- No embeddings, semantic vector search, conflict reconciliation or cross-device sync. The v0.2 compiler establishes a measurable lexical baseline first.
-- External source content is inert, untrusted evidence. It is bounded, hashed and attributed; it is never executed or promoted to an instruction.
-- Agent CLI invocation and MCP compatibility should be tested against your installed versions; `brain run` is a basic wrapper, not a transparent full agent harness.
+- **User memories** — verified on write. **Agent memories** — candidate only; `brain approve` promotes them.
+- **External sources** — bounded text, never executed. Kept as attributed evidence with URL, hash and staleness.
+- **Skills** — never auto-installed. `brain skills trust` requires an explicit per-skill approval after your review.
+- **Context files** — written with `0600` permissions, deleted when the agent process exits.
+- **SQLite store** — `~/.brain` directory at `0700`, database at `0600`. Back up separately.
+
+→ [Security reference](docs/security.md)
+
+## Documentation
+
+| Document | Contents |
+|---|---|
+| [Getting started](docs/getting-started.md) | Install, first use, daily workflow |
+| [Commands](docs/commands.md) | Full reference with flags and examples |
+| [Brain setup](docs/setup.md) | Auto-setup workflow, capability provisioning |
+| [MCP integration](docs/mcp.md) | Connecting Claude, Codex, Cursor, Kiro |
+| [Architecture](docs/ARCHITECTURE.md) | Components, trust model, data flow |
+| [Security](docs/security.md) | Trust classes, boundaries, caveats |
+| [Releasing](docs/RELEASING.md) | How releases and the bump workflow operate |
+| [ADR 0001](docs/adr/0001-native-go-runtime.md) | Why Go |
+| [ADR 0002](docs/adr/0002-intelligence-substrate.md) | Intelligence substrate design |
+| [ADR 0003](docs/adr/0003-external-structural-intelligence.md) | External structural intelligence approach |
 
 ## Development
 
-```bash
-npm test
-npm run check
-node bin/brain.mjs help
+```sh
+go test ./...          # all tests including property-based tests
+go build ./cmd/brain   # build the binary
+npm test               # JavaScript baseline
+npm run check          # lint
 ```
-
-Landing page: [`site/index.html`](site/index.html), deploy as a static site. No backend or access to personal memory.
 
 ## Roadmap
 
 - [x] SQLite + FTS5 canonical memory store
-- [x] Scoped recall, manual review, basic context packs
 - [x] MCP stdio tool gateway
-- [x] CLI wrapper for installed agents
-- [x] Daily maintenance for macOS/Linux
-- [x] skills.sh find + manually approved skill use
-- [x] Deterministic project profiler and token-budgeted context compiler
-- [x] Explainable skill/MCP/CLI recommendations without auto-installation
-- [x] Explicitly trusted source sync with provenance and prompt-injection boundaries
+- [x] CLI wrappers for Claude, Codex, Cursor, Kiro
+- [x] Daily trusted-source refresh with provenance
+- [x] Token-budgeted context compiler
+- [x] Explainable skill / MCP / CLI recommendations
 - [x] Context-pack feedback and bounded knowledge quality scoring
-- [x] Daily conditional refresh of explicitly trusted best-practice sources
+- [x] Auto-project setup — `brain setup` with persistent profiles
+- [x] Capability provisioning with user approval
+- [x] Self-update command — `brain update`
+- [x] Automated bump-and-release CI workflow
 - [ ] Curated primary-source feed catalog and source-specific extractors
 - [ ] Benchmark recommendation precision and tokens per successful task
-- [ ] Session capture adapters and automatic outcome extraction
 - [ ] Project identity handshake across MCP clients
+- [ ] Session capture adapters and automatic outcome extraction
 - [ ] Skill version pinning and validated upgrades
-- [ ] Reviewed capability-provider registry (recommendation only; no execution)
-- [ ] Optional structural-provider adapters, gated by benchmarks and explicit trust
 - [ ] Cross-device sync with single authoritative writer
-- [ ] Context quality benchmarks and self-improvement evaluation
 
 Contributions welcome. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
 

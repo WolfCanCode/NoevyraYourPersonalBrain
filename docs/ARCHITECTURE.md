@@ -1,46 +1,162 @@
 # Architecture and trust boundaries
 
-**Canonical store:** One local SQLite database at `${BRAIN_HOME:-~/.brain}/brain.sqlite`. GitHub is authoritative for the source code, not runtime data. Memory contents are never committed by the app.
+**Canonical store:** One local SQLite database at `${BRAIN_HOME:-~/.brain}/brain.sqlite`. GitHub is authoritative for source code, not runtime data. Memory contents are never committed.
 
-## Runtime
+---
 
-Native Go preview adds `cmd/brain` (process entry), `internal/app` (CLI, MCP and OS adapters), and `internal/memory` (persistence and trust policy). It preserves the JavaScript format below. See [ADR 0001](adr/0001-native-go-runtime.md) for the decision, migration and limitations, and [releases](RELEASING.md) for native verification and distribution.
+## Package structure
 
-The v0.2 intelligence layer lives in `internal/intelligence`: bounded project profiling, explicitly trusted text-source synchronization, token-budgeted evidence compilation, explainable capability routing and feedback-weighted knowledge ranking. It remains model-free and provider-neutral. See [ADR 0002](adr/0002-intelligence-substrate.md).
+```
+cmd/brain/          — process entry point; injects version/commit/builtAt via ldflags
+internal/
+  app/              — CLI, MCP adapter, OS adapters
+    cli.go          — command dispatch and flag parsing
+    setup.go        — brain setup orchestration (projectRoot, promptSelection, runSetup)
+    update.go       — brain update (fetchLatestTag, installUpdate, replaceBinary)
+    mcp.go          — JSON-RPC 2.0 stdio MCP server
+    scheduler.go    — macOS launchd / Linux systemd timer
+  intelligence/     — stateless intelligence layer; never invokes an LLM
+    profile.go      — bounded project profiling (language, stack, signal detection)
+    provision.go    — ProvisionCatalog, DiscoverCapabilities, Provision, writeMCPEntry
+    compiler.go     — token-budgeted context compiler (Compile, Feedback)
+    source.go       — trusted external source sync (AddSource, SyncSources)
+  memory/           — persistence and trust policy
+    store.go        — SQLite schema, FTS5, Recall, UpsertProfile, Trust, Skills
+src/                — JavaScript compatibility layer (legacy CLI + MCP)
+```
 
-Structural intelligence such as code graphs is an optional external capability, not a core index or storage dependency. Noevyra will own routing, trust, budgets and evidence normalization; a provider owns parsing, indexing and language-specific accuracy. The core must work unchanged without a provider. The first planned milestone is a registry that recommends reviewed providers without executing them. See [ADR 0003](adr/0003-external-structural-intelligence.md).
+---
 
-Keep dependencies pointing inward: adapters call storage policy; storage never launches agents or invokes a model. Migration, FTS rebuild, and maintenance updates use transactions. WAL, a busy timeout, and one pooled connection per process avoid accidental per-connection pragma differences. SQL parameters carry user values; FTS tokens are quoted. Operational errors are returned instead of silently degrading search.
+## Component diagram
 
-Best practices are adopted from primary sources with a reason and a compatibility test, not copied indiscriminately from agent frameworks. Prefer local data, explicit trust transitions, bounded protocol messages/subprocess output, opt-in external execution, minimal workflow permissions and SHA-pinned actions. The opted-in daily timer refreshes registered sources with conditional requests; it never installs or executes fetched instructions.
+```
+Claude · Codex · Cursor · Kiro · any MCP agent
+              │
+     ┌────────┴────────┐
+     │                 │
+  brain run         brain mcp
+  (CLI layer)       (MCP adapter)
+     │                 │
+     └────────┬─────────┘
+              │
+       Intelligence layer
+       ┌──────┴──────┐
+       │             │
+   profile.go    compiler.go ─── provision.go
+   (detect)      (compile)       (discover/provision)
+       │             │                  │
+       └──────┬──────┘           Agent config files
+              │                  (~/.kiro/settings/mcp.json
+       Memory layer               ~/.claude.json, etc.)
+       store.go
+       brain.sqlite (WAL · FTS5)
+              │
+       Trusted external sources ──► daily conditional fetch
+```
 
-- `src/store.mjs`: SQLite schema, FTS5, scope-filtered search, candidate review, project hashing and append-only event records.
-- `src/mcp.mjs`: JSON-RPC 2.0 stdio gateway; tool calls are restricted to the invoking project. Agent writes become candidates.
-- `src/cli.mjs`: CLI, agent wrappers, skills CLI integration, status and diagnostics.
-- `src/scheduler.mjs`: macOS `launchd` or Linux `systemd` daily maintenance.
+---
+
+## Data flow: `brain setup`
+
+```
+cwd
+ │  projectRoot() — walk ≤10 ancestors for .git
+ ▼
+Project root
+ │  intelligence.Profile() — scan ≤4000 files
+ ▼
+ProjectProfile { Languages, Stacks, Signals, Manifests, Counts }
+ │  store.LatestProfile() — check existing
+ │  prompt confirm if exists and --refresh not set
+ ▼
+intelligence.DiscoverCapabilities() — query ProvisionCatalog
+ │  up to 10 entries ranked by confidence
+ ▼
+promptSelection() — user picks subset
+ │
+ ▼  for each selected capability:
+intelligence.Provision()
+  mcp  → writeMCPEntry() — atomic write-then-rename to agent config files
+  skill → prompt per-skill approval → store.Trust()
+  cli  → exec.LookPath()
+ │
+ ▼
+store.UpsertProfile() — persist; evict oldest when count > 3
+store.Log("setup_session", …)
+```
+
+## Data flow: `brain run <agent>`
+
+```
+store.LatestProfile(projectID)  →  stored profile (or detect on-the-fly)
+intelligence.Compile()          →  context pack (memories + knowledge + recommendations)
+os.MkdirTemp()                  →  session directory 0700
+os.WriteFile(context.md, 0600)  →  compact pack + approved skill instructions
+exec.Command(agent, task…)      →  BRAIN_CONTEXT_FILE=<path>
+defer os.RemoveAll(sessionDir)  →  cleaned up on agent exit
+```
+
+---
+
+## Schema (v3)
+
+```sql
+memory          — id, type, scope, project_id, content, source, status, expires_at
+events          — id, kind, project_id, payload, created_at
+settings        — key, value
+approved_skills — ref, keyword, approved_at
+knowledge_sources — id, name, url, tags, status, etag, last_modified, content_hash, last_synced_at
+knowledge_items — id, source_id, title, content, tags, content_hash, status, quality
+context_packs   — id, project_id, task, budget_tokens, estimated_tokens
+context_pack_items — pack_id, item_kind, item_id, score, estimated_tokens
+project_profiles — id, project_id, root, profile_json, capabilities_json, created_at
+
+memory_fts      — FTS5 external-content over memory.content
+knowledge_fts   — FTS5 external-content over knowledge_items (title, content, tags)
+```
+
+`project_profiles` retains the 3 most recent profiles per `project_id`. `UpsertProfile` evicts the oldest before inserting when count ≥ 3.
+
+---
 
 ## Trust classes
 
 | Input | Trust | Allowed action |
-| --- | --- | --- |
-| User invoking `brain remember` | User-approved | Verified write |
-| Agent writing through MCP | Untrusted | Candidate only |
-| Third-party skill from skills.sh | Untrusted | Explicit trust required |
-| Git working tree | May be attacker-controlled | Reads only when requested by agent |
-| Remote LLM output | Untrusted | No automatic skill promotion |
-| Explicitly registered HTTPS source | Trusted provenance, untrusted content | Bounded text retrieval and attributed context only |
-| Project files and manifests | Untrusted evidence | Bounded read-only profiling; never interpreted as control instructions |
-| Optional structural provider output | Untrusted evidence | Validated, attributed and token-capped facts; never automatic memory or instructions |
+|---|---|---|
+| User `brain remember` | User-approved | Verified write |
+| Agent `brain_remember` via MCP | Untrusted | Candidate only |
+| `brain skills trust` | User-approved after review | Skill trust store write |
+| `brain setup` provisioning | User-approved per capability | MCP config write, skill trust |
+| Registered HTTPS source | Trusted provenance, untrusted content | Bounded text, attributed context |
+| Git working tree | May be attacker-controlled | Bounded read-only profiling |
+| Remote LLM output | Untrusted | No automatic promotion |
+
+---
+
+## Design constraints
+
+- Dependencies point inward: adapters call storage policy; storage never launches agents.
+- The intelligence layer is model-free and provider-neutral; it never calls an LLM.
+- `brain setup` and `brain run` never start processes without a user-initiated command.
+- External source content remains inert evidence — it is never executed or interpreted as instructions.
+- `ProvisionCatalog` is the single source of truth for both `brain setup` capability discovery and `brain advise` context-pack recommendations.
+- Schema migrations are additive (`CREATE TABLE IF NOT EXISTS`); version guards prevent downgrade.
+
+---
 
 ## Known limitations
 
-- No embedding search, only SQLite FTS5.
-- No authoritative merge or cross-device sync.
-- Project scope relies on working directory and Git root.
-- MCP implementation is intentionally minimal; it is not a complete MCP SDK implementation.
-- `brain run` passes a short instruction containing a file path to installed CLIs; it doesn't inject native lifecycle hooks.
-- Daily maintenance refreshes only explicitly trusted sources. Skill checks and upgrades remain explicit because the skills CLI executes third-party code.
+- FTS5 lexical search only; no vector/semantic search.
+- Project scope relies on Git root of the MCP process working directory.
+- MCP implements a bounded stdio subset; validate with your client before depending on edge cases.
+- `brain run` is a basic wrapper; it does not sandbox agent processes.
+- Windows binary is not Authenticode-signed; macOS binary is not notarized.
+- Cross-device sync is not implemented.
 
-## Planned next architecture milestone
+---
 
-Measure recommendation precision, tokens per successful task and repeated-context reduction. Then add a curated primary-source feed catalog, source-specific extractors, project identity handshake and evaluated skill promotion. A registry-only structural-provider specification may recommend explicitly reviewed integrations; provider execution remains a later, separately tested decision. Any model-assisted reranker or structural provider must beat the deterministic baseline on representative tasks before becoming a default.
+## Related decisions
+
+- [ADR 0001](adr/0001-native-go-runtime.md) — Why Go over Node or Rust
+- [ADR 0002](adr/0002-intelligence-substrate.md) — Intelligence substrate design
+- [ADR 0003](adr/0003-external-structural-intelligence.md) — External structural intelligence approach

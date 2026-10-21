@@ -2,52 +2,377 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#101014"><meta name="description" content="Stop paying coding agents to relearn your repo. One local brain gives any agent compact project context, trusted evidence and fitting tools.">
-<meta property="og:title" content="Noevyra — Intelligence That Evolves">
-<meta property="og:description" content="Your model is not the bottleneck. Rebuilding the same context is. Give every coding agent a compact, trusted head start.">
+<meta name="theme-color" content="#101014">
+<meta name="description" content="brain setup once. Switch between Claude, Codex, Cursor and Kiro without rebuilding context. One local brain for every agent.">
+<meta property="og:title" content="Noevyra — One brain. Any agent.">
+<meta property="og:description" content="brain setup once. Your project profile, trusted knowledge and capability recommendations travel with you across every agent.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://github.com/WolfCanCode/personal-ai-brain">
 <meta property="og:image" content="https://raw.githubusercontent.com/WolfCanCode/personal-ai-brain/main/site/assets/noevyra-logo.jpg">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://raw.githubusercontent.com/WolfCanCode/personal-ai-brain/main/site/assets/noevyra-logo.jpg">
 <link rel="icon" href="assets/noevyra-icon.png" type="image/png">
-<title>Noevyra — Intelligence That Evolves</title>
+<title>Noevyra — One brain. Any agent.</title>
 <style>
-:root{color-scheme:dark;--bg:#101014;--panel:#19191f;--line:#303039;--muted:#aaaab8;--text:#f4f2ee;--accent:#c7b4ff;--green:#b4e8bf}*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:35px}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}a{color:inherit;text-decoration:none}button{font:inherit;cursor:pointer}button,a{touch-action:manipulation}a:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:5px}main,nav,footer{max-width:1160px;margin:auto;padding-left:32px;padding-right:32px}nav{height:98px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}.brand{font-weight:750;letter-spacing:-.6px;display:flex;gap:12px;align-items:center}.mark{display:grid;place-items:center;width:32px;height:32px;background:var(--accent);color:#171222;border-radius:10px;font:700 22px monospace}.nav-links{display:flex;align-items:center;gap:29px;font-size:13px;color:var(--muted)}.nav-links a:hover{color:white}.tag{font:11px/1.4 ui-monospace,monospace;letter-spacing:1px;text-transform:uppercase;color:var(--accent)}.pill{border:1px solid #514763;border-radius:100px;padding:7px 12px;display:inline-flex;align-items:center;gap:8px}.dot{width:6px;height:6px;border-radius:50%;background:var(--green)}.hero{padding:86px 0 68px;display:grid;grid-template-columns:1.1fr 1fr;gap:62px;align-items:center}h1{font-size:clamp(48px,6.6vw,78px);line-height:1.05;letter-spacing:-4.3px;font-weight:650;margin:26px 0}h1 span{color:var(--accent)}.lead{color:var(--muted);max-width:450px;font-size:17px;line-height:1.8}.actions{display:flex;gap:12px;flex-wrap:wrap;margin:28px 0 18px}.btn{display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:8px;padding:12px 19px;color:var(--text);background:transparent;font-size:13px;font-weight:650;gap:14px}.btn.primary{background:var(--accent);color:#181222;border-color:var(--accent)}.btn:hover{filter:brightness(1.12);border-color:var(--accent)}.fine{font-size:11px;color:var(--muted);font-family:ui-monospace,monospace}.terminal{border:1px solid #44404e;border-radius:14px;background:#15151b;box-shadow:0 24px 90px #0005;overflow:hidden;transform:rotate(1deg)}.termbar{padding:15px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;font:11px ui-monospace,monospace;color:var(--muted)}.lights{display:flex;gap:5px}.lights i{width:7px;height:7px;background:#50505e;border-radius:50%}.lights i:first-child{background:var(--accent)}.terminal-body{padding:25px;font:12px/1.9 ui-monospace,monospace}.comment{color:#8e8e9d}.prompt{color:var(--accent)}.ok{color:var(--green)}.memory{margin:16px 0 25px;padding:14px 16px;border:1px solid #383541;border-left:2px solid var(--accent);border-radius:3px;color:#d8d2e7}.memory .tag{font-size:9px;display:block;margin-bottom:8px}.terminal-foot{border-top:1px solid var(--line);padding:12px 20px;color:#9f9fab;font:10px ui-monospace,monospace;display:flex;justify-content:space-between}.strip{display:flex;justify-content:space-between;gap:20px;padding:23px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);font:11px ui-monospace,monospace;color:var(--muted)}.strip b{color:var(--text);font-weight:500}section{padding:78px 0;border-bottom:1px solid var(--line)}.section-top{display:flex;align-items:flex-end;justify-content:space-between;gap:30px;margin-bottom:30px}h2{font-size:36px;line-height:1.15;letter-spacing:-1.4px;font-weight:600;margin:12px 0 0}.section-top p{color:var(--muted);font-size:13px;max-width:310px;margin:0}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.card{border:1px solid var(--line);border-radius:10px;padding:26px;background:linear-gradient(140deg,#1c1b23,#16161b)}.number{font:11px ui-monospace,monospace;color:var(--accent)}h3{font-size:18px;letter-spacing:-.3px;font-weight:600;margin:25px 0 9px}.card p{font-size:13px;color:var(--muted);margin:0}.demo{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--panel)}.demo-head{padding:20px 24px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);gap:20px}.tabs{display:flex;gap:6px;flex-wrap:wrap}.tabs button{border:1px solid transparent;background:transparent;color:var(--muted);border-radius:6px;padding:8px 14px;font:12px ui-monospace,monospace}.tabs button[aria-pressed=true]{background:#342d43;color:var(--accent);border-color:#514563}.demo-grid{display:grid;grid-template-columns:1fr 1fr}.demo-pane{padding:30px}.demo-pane+div{border-left:1px solid var(--line)}.demo-label{font:10px ui-monospace,monospace;color:var(--muted);text-transform:uppercase;letter-spacing:1px}.demo pre{white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.8 ui-monospace,monospace;color:var(--accent);margin:22px 0}.context-row{padding:11px 0;border-bottom:1px solid var(--line);font-size:12px;display:flex;gap:13px}.context-row:last-child{border:0}.context-row span{font:10px ui-monospace,monospace;padding-top:4px;color:var(--green);flex-shrink:0}.demo-note{padding:14px 24px;background:#141419;border-top:1px solid var(--line);font-size:11px;color:var(--muted)}.roadmap{display:grid;grid-template-columns:1fr 1fr;gap:18px}.roadmap .card h3{margin-top:0}.list{list-style:none;padding:0;margin:20px 0 0}.list li{font-size:13px;padding:11px 0;border-top:1px solid var(--line);color:var(--muted)}.list li span{color:var(--green);margin-right:10px}.list.future li span{color:#b8a6e1}.get-started{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:start}.get-started p{color:var(--muted);font-size:14px}.commands{background:#19191f;border:1px solid var(--line);border-radius:10px;padding:23px}.commands-top{display:flex;justify-content:space-between;align-items:center}.commands pre{font:12px/1.9 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere;margin:20px 0 0}.copy{font:11px ui-monospace,monospace;color:var(--accent);background:transparent;border:1px solid #484052;padding:6px 11px;border-radius:5px}.author{margin-top:28px;display:flex;align-items:center;gap:12px;font-size:12px}.avatar{width:37px;height:37px;border-radius:50%;background:#272330;display:grid;place-items:center;color:var(--accent);font-weight:700}.author small{display:block;color:var(--muted)}footer{display:flex;justify-content:space-between;gap:20px;padding-top:27px;padding-bottom:30px;color:var(--muted);font-size:11px}.skip{position:absolute;top:-100px}.skip:focus{top:10px;left:10px;background:var(--bg);padding:10px;z-index:9}@media(max-width:850px){.hero{gap:28px}.terminal-body{padding:18px}h1{letter-spacing:-2.5px}.strip{flex-wrap:wrap}.get-started{gap:30px}.nav-links{gap:17px}}@media(max-width:650px){main,nav,footer{padding-left:20px;padding-right:20px}nav{height:78px}.nav-links>a:not(:last-child){display:none}.hero{grid-template-columns:1fr;padding:48px 0;gap:36px}h1{font-size:58px}.terminal{transform:none}.section-top{display:block}.section-top p{margin-top:18px;max-width:none}.cards,.roadmap,.demo-grid,.get-started{grid-template-columns:1fr}.demo-pane+div{border-left:0;border-top:1px solid var(--line)}.demo-head{align-items:flex-start;flex-direction:column;gap:12px}.cards{gap:12px}.card{padding:23px}h3{margin-top:15px}section{padding:52px 0}.strip{gap:14px;font-size:10px}footer{flex-wrap:wrap}h2{font-size:30px}}@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
-</style>
-<style>
-.brand{letter-spacing:.8px}.mark{overflow:hidden;border-radius:50%;background:#05080d}.mark img{width:100%;height:100%;object-fit:cover}.brand-visual{position:relative;display:grid;place-items:center;min-width:0}.hero-logo{display:block;width:min(100%,520px);aspect-ratio:1;border-radius:18px;border:1px solid #3b3544;box-shadow:0 28px 100px #0009;object-fit:cover}.brand-visual::after{content:"LOCAL · PRIVATE · PORTABLE";position:absolute;bottom:18px;padding:7px 12px;border:1px solid #ffffff22;border-radius:100px;background:#07090dcc;color:#c9d9f3;font:10px ui-monospace,monospace;letter-spacing:1.5px}
+:root{color-scheme:dark;--bg:#101014;--panel:#19191f;--line:#303039;--muted:#aaaab8;--text:#f4f2ee;--accent:#c7b4ff;--green:#b4e8bf}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:35px}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+a{color:inherit;text-decoration:none}button{font:inherit;cursor:pointer}button,a{touch-action:manipulation}
+a:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:5px}
+main,nav,footer{max-width:1160px;margin:auto;padding-left:32px;padding-right:32px}
+nav{height:98px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}
+.brand{font-weight:750;letter-spacing:-.6px;display:flex;gap:12px;align-items:center}
+.mark{overflow:hidden;border-radius:50%;width:32px;height:32px;background:#05080d;display:grid;place-items:center}
+.mark img{width:100%;height:100%;object-fit:cover}
+.nav-links{display:flex;align-items:center;gap:29px;font-size:13px;color:var(--muted)}
+.nav-links a:hover{color:white}
+.tag{font:11px/1.4 ui-monospace,monospace;letter-spacing:1px;text-transform:uppercase;color:var(--accent)}
+.pill{border:1px solid #514763;border-radius:100px;padding:7px 12px;display:inline-flex;align-items:center;gap:8px}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--green)}
+.hero{padding:86px 0 68px;display:grid;grid-template-columns:1.1fr 1fr;gap:62px;align-items:center}
+h1{font-size:clamp(48px,6.6vw,78px);line-height:1.05;letter-spacing:-4.3px;font-weight:650;margin:26px 0}
+h1 span{color:var(--accent)}
+.lead{color:var(--muted);max-width:450px;font-size:17px;line-height:1.8}
+.actions{display:flex;gap:12px;flex-wrap:wrap;margin:28px 0 18px}
+.btn{display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:8px;padding:12px 19px;color:var(--text);background:transparent;font-size:13px;font-weight:650;gap:14px}
+.btn.primary{background:var(--accent);color:#181222;border-color:var(--accent)}
+.btn:hover{filter:brightness(1.12);border-color:var(--accent)}
+.fine{font-size:11px;color:var(--muted);font-family:ui-monospace,monospace}
+.brand-visual{position:relative;display:grid;place-items:center;min-width:0}
+.hero-logo{display:block;width:min(100%,520px);aspect-ratio:1;border-radius:18px;border:1px solid #3b3544;box-shadow:0 28px 100px #0009;object-fit:cover}
+.brand-visual::after{content:"LOCAL · PRIVATE · PORTABLE";position:absolute;bottom:18px;padding:7px 12px;border:1px solid #ffffff22;border-radius:100px;background:#07090dcc;color:#c9d9f3;font:10px ui-monospace,monospace;letter-spacing:1.5px}
+.strip{display:flex;justify-content:space-between;gap:20px;padding:23px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);font:11px ui-monospace,monospace;color:var(--muted)}
+.strip b{color:var(--text);font-weight:500}
+section{padding:78px 0;border-bottom:1px solid var(--line)}
+.section-top{display:flex;align-items:flex-end;justify-content:space-between;gap:30px;margin-bottom:30px}
+h2{font-size:36px;line-height:1.15;letter-spacing:-1.4px;font-weight:600;margin:12px 0 0}
+.section-top p{color:var(--muted);font-size:13px;max-width:310px;margin:0}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.card{border:1px solid var(--line);border-radius:10px;padding:26px;background:linear-gradient(140deg,#1c1b23,#16161b)}
+.number{font:11px ui-monospace,monospace;color:var(--accent)}
+h3{font-size:18px;letter-spacing:-.3px;font-weight:600;margin:25px 0 9px}
+.card p{font-size:13px;color:var(--muted);margin:0}
+.demo{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--panel)}
+.demo-head{padding:20px 24px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);gap:20px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tabs button{border:1px solid transparent;background:transparent;color:var(--muted);border-radius:6px;padding:8px 14px;font:12px ui-monospace,monospace}
+.tabs button[aria-pressed=true]{background:#342d43;color:var(--accent);border-color:#514563}
+.demo-grid{display:grid;grid-template-columns:1fr 1fr}
+.demo-pane{padding:30px}
+.demo-pane+div{border-left:1px solid var(--line)}
+.demo-label{font:10px ui-monospace,monospace;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+.demo pre{white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.8 ui-monospace,monospace;color:var(--accent);margin:22px 0}
+.context-row{padding:11px 0;border-bottom:1px solid var(--line);font-size:12px;display:flex;gap:13px}
+.context-row:last-child{border:0}
+.context-row span{font:10px ui-monospace,monospace;padding-top:4px;color:var(--green);flex-shrink:0}
+.demo-note{padding:14px 24px;background:#141419;border-top:1px solid var(--line);font-size:11px;color:var(--muted)}
+.roadmap{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.roadmap .card h3{margin-top:0}
+.list{list-style:none;padding:0;margin:20px 0 0}
+.list li{font-size:13px;padding:11px 0;border-top:1px solid var(--line);color:var(--muted)}
+.list li span{color:var(--green);margin-right:10px}
+.list.future li span{color:#b8a6e1}
+.get-started{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:start}
+.get-started p{color:var(--muted);font-size:14px}
+.commands{background:#19191f;border:1px solid var(--line);border-radius:10px;padding:23px}
+.commands-top{display:flex;justify-content:space-between;align-items:center}
+.commands pre{font:12px/1.9 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere;margin:20px 0 0}
+.copy{font:11px ui-monospace,monospace;color:var(--accent);background:transparent;border:1px solid #484052;padding:6px 11px;border-radius:5px}
+.author{margin-top:28px;display:flex;align-items:center;gap:12px;font-size:12px}
+.avatar{width:37px;height:37px;border-radius:50%;background:#272330;display:grid;place-items:center;color:var(--accent);font-weight:700}
+.author small{display:block;color:var(--muted)}
+footer{display:flex;justify-content:space-between;gap:20px;padding-top:27px;padding-bottom:30px;color:var(--muted);font-size:11px}
+.skip{position:absolute;top:-100px}
+.skip:focus{top:10px;left:10px;background:var(--bg);padding:10px;z-index:9}
+.setup-flow{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-top:30px}
+.flow-step{background:var(--panel);padding:22px 20px}
+.flow-step .number{margin-bottom:10px}
+.flow-step h4{font-size:14px;font-weight:600;margin:0 0 6px;letter-spacing:-.2px}
+.flow-step p{font-size:12px;color:var(--muted);margin:0}
+@media(max-width:900px){.setup-flow{grid-template-columns:repeat(2,1fr)}.cards{grid-template-columns:1fr 1fr}}
+@media(max-width:850px){.hero{gap:28px}h1{letter-spacing:-2.5px}.strip{flex-wrap:wrap}.get-started{gap:30px}.nav-links{gap:17px}}
+@media(max-width:650px){main,nav,footer{padding-left:20px;padding-right:20px}nav{height:78px}.nav-links>a:not(:last-child){display:none}.hero{grid-template-columns:1fr;padding:48px 0;gap:36px}h1{font-size:58px}.brand-visual::after{display:none}.section-top{display:block}.section-top p{margin-top:18px;max-width:none}.cards,.roadmap,.demo-grid,.get-started,.setup-flow{grid-template-columns:1fr}.demo-pane+div{border-left:0;border-top:1px solid var(--line)}.demo-head{align-items:flex-start;flex-direction:column;gap:12px}.card{padding:23px}h3{margin-top:15px}section{padding:52px 0}.strip{gap:14px;font-size:10px}footer{flex-wrap:wrap}h2{font-size:30px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 </style>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
-<nav aria-label="Main navigation"><a class="brand" href="#"><span class="mark" aria-hidden="true"><img src="assets/noevyra-icon.png" alt=""></span> NOEVYRA</a><div class="nav-links"><a href="#why">Why</a><a href="#principles">The brain</a><a href="#playground">How it works</a><a href="#roadmap">Roadmap</a><a href="#start" class="btn">Get v0.2.1 ↗</a></div></nav>
+<nav aria-label="Main navigation">
+  <a class="brand" href="#"><span class="mark" aria-hidden="true"><img src="assets/noevyra-icon.png" alt=""></span> NOEVYRA</a>
+  <div class="nav-links">
+    <a href="#why">Why</a>
+    <a href="#setup">Setup</a>
+    <a href="#agents">Agents</a>
+    <a href="#roadmap">Roadmap</a>
+    <a href="#start" class="btn">Get v0.3.0 ↗</a>
+  </div>
+</nav>
 <main id="main">
-<div class="hero"><div><span class="tag pill"><span class="dot"></span> Local-first · v0.2.1 released</span><h1>One brain.<br>Any agent.<br><span>Less waste.</span></h1><p class="lead"><strong>Your model is not the bottleneck. Rebuilding the same context is.</strong> Noevyra gives every agent the project decisions, trusted evidence and fitting tools it needs—without another giant prompt.</p><div class="actions"><a href="#why" class="btn primary">See the before / after <span>↗</span></a><a href="#start" class="btn">Try the CLI →</a></div><div class="fine">Go + SQLite FTS5 + MCP · No LLM required · MIT</div></div>
-<div class="brand-visual"><img class="hero-logo" src="assets/noevyra-logo.jpg" alt="Noevyra — Intelligence That Evolves" width="900" height="900"></div>
+
+<!-- HERO -->
+<div class="hero">
+  <div>
+    <span class="tag pill"><span class="dot"></span> v0.3.0 · Local-first · Any agent</span>
+    <h1>One brain.<br>Any agent.<br><span>Zero re-setup.</span></h1>
+    <p class="lead"><strong>Your model is not the bottleneck. Rebuilding the same context is.</strong> Run <code>brain setup</code> once. Switch between Claude, Codex, Cursor and Kiro — the profile, decisions and capabilities travel with you.</p>
+    <div class="actions">
+      <a href="#setup" class="btn primary">See brain setup ↓</a>
+      <a href="#start" class="btn">Install free →</a>
+    </div>
+    <div class="fine">Go + SQLite FTS5 + MCP · No LLM required · MIT license</div>
+  </div>
+  <div class="brand-visual">
+    <img class="hero-logo" src="assets/noevyra-logo.jpg" alt="Noevyra — Intelligence That Evolves" width="900" height="900">
+  </div>
 </div>
-<div class="strip"><span>01 / <b>Profile</b></span><span>02 / <b>Retrieve</b></span><span>03 / <b>Reason</b></span><span>04 / <b>Route</b></span></div>
-<section id="why"><div class="section-top"><div><span class="tag">The everyday pain</span><h2>Stop paying for<br>the same context twice.</h2></div><p>Every new chat or agent repeats work you already paid for: rediscovering the repo, rereading docs, rebuilding decisions and guessing which tools fit.</p></div><div class="roadmap"><article class="card"><span class="number">WITHOUT NOEVYRA</span><h3>Context gets rebuilt and lost.</h3><ul class="list future"><li><span>×</span> Re-explain architecture and constraints every session</li><li><span>×</span> Paste large “just in case” prompts that burn tokens</li><li><span>×</span> Get inconsistent advice from stale, unattributed docs</li><li><span>×</span> Lose useful thinking when switching agents</li></ul></article><article class="card"><span class="number">WITH NOEVYRA</span><h3>Every agent gets a shared head start.</h3><ul class="list"><li><span>✓</span> Detect the project and recall verified decisions locally</li><li><span>✓</span> Compile only relevant evidence to a strict token budget</li><li><span>✓</span> Refresh trusted practice daily with provenance</li><li><span>✓</span> Suggest fitting skills, MCPs and CLIs—with reasons</li></ul></article></div></section>
-<section id="principles"><div class="section-top"><div><span class="tag">An intelligence substrate, not another chatbot</span><h2>Carry the thinking.<br>Cut the tokens.</h2></div><p>A deterministic baseline that gives any agent a compact plan, evidence and the right capabilities without depending on a fancy model.</p></div><div class="cards"><article class="card"><span class="number">01 / LEARN</span><h3>Pull trusted practice daily.</h3><p>Conditionally refresh explicitly registered sources, chunk them locally and keep URL, hash and freshness provenance. Remote content remains inert data.</p></article><article class="card"><span class="number">02 / SHAPE</span><h3>Understand the project.</h3><p>Detect languages, frameworks, manifests, CI and deployment signals, then combine them with reviewed memory and task-relevant evidence.</p></article><article class="card"><span class="number">03 / GUIDE</span><h3>Give agents a head start.</h3><p>Compile an approach, risks, verification gates and explainable skill, MCP or CLI suggestions inside a strict token budget.</p></article></div></section>
-<section id="playground"><div class="section-top"><div><span class="tag">One interface, many agents</span><h2>Ask once.<br>Hand off cleanly.</h2></div><p>Use the CLI directly or expose the same compiler through MCP. The intelligence pack stays inspectable and model-independent.</p></div><div class="demo"><div class="demo-head"><div class="tabs" role="group" aria-label="Choose example agent"><button type="button" data-agent="claude" aria-pressed="true">Claude</button><button type="button" data-agent="codex" aria-pressed="false">Codex</button><button type="button" data-agent="cursor" aria-pressed="false">Cursor</button></div><span class="tag">Interactive illustration</span></div><div class="demo-grid"><div class="demo-pane"><span class="demo-label">01 · Launch with compiled context</span><pre id="demo-command" aria-live="polite">brain run claude "Build the booking API"</pre><button type="button" class="copy" id="copy-demo">Copy command</button><p class="fine">Or call brain_advise from any compatible MCP client.</p></div><div class="demo-pane"><span class="demo-label">02 · What the pack carries</span><div class="context-row"><span>PLAN</span><div>A bounded approach shaped by project signals.</div></div><div class="context-row"><span>RISKS</span><div>Relevant failure modes and verification gates.</div></div><div class="context-row"><span>EVIDENCE</span><div>Attributed memory and trusted source excerpts.</div></div><div class="context-row"><span>TOOLS</span><div>Skills, MCPs and CLI suggestions with reasons.</div></div></div></div><div class="demo-note">Feedback records usefulness and actual token use. After enough outcomes, Brain adapts the default budget while keeping explicit limits and full provenance.</div></div></section>
-<section id="roadmap"><div class="section-top"><div><span class="tag">Build in the open</span><h2>Useful baseline.<br>Measured evolution.</h2></div><p>v0.2.1 ships the safe, testable substrate plus daily refresh without widening the trust boundary.</p></div><div class="roadmap"><article class="card"><h3><span class="ok">●</span> Available in v0.2.1</h3><ul class="list"><li><span>✓</span> Bounded project profiler + reasoning frame</li><li><span>✓</span> Daily trusted-source refresh with provenance</li><li><span>✓</span> Token-budgeted context compiler</li><li><span>✓</span> Explainable skill / MCP / CLI routing</li><li><span>✓</span> Feedback-weighted ranking and adaptive budget</li></ul></article><article class="card"><h3>◌ Next experiments</h3><ul class="list future"><li><span>→</span> Project identity handshake for MCP clients</li><li><span>→</span> Source quality and freshness policies</li><li><span>→</span> Session outcome extraction with review</li><li><span>→</span> Context quality and token benchmarks</li><li><span>→</span> Evaluated learning before broader automation</li></ul></article></div></section>
-<section id="start" class="get-started"><div><span class="tag">Made for people who ship</span><h2>A brain you can<br>inspect and measure.</h2><p>Built by Tommy / WolfCanCode. Noevyra remembers decisions, pulls trusted best practices and turns both into compact guidance that any agent can consume.</p><p>v0.2.1 ships the deterministic intelligence substrate and opted-in daily trusted-source refresh in one verified binary.</p><div class="actions"><a class="btn" href="https://github.com/WolfCanCode/personal-ai-brain" target="_blank" rel="noopener noreferrer">GitHub repository ↗</a><a class="btn" href="https://github.com/WolfCanCode/personal-ai-brain/releases/tag/v0.2.1" target="_blank" rel="noopener noreferrer">Download v0.2.1 ↗</a></div><div class="author"><span class="avatar">W</span><div>WolfCanCode<small>Building small. Thinking long-term.</small></div></div></div><div class="commands"><div class="commands-top"><span class="demo-label">Install latest release · macOS / Linux</span><button class="copy" type="button" id="copy-install">Copy</button></div><pre id="install-command">curl -fsSL https://raw.githubusercontent.com/WolfCanCode/personal-ai-brain/main/install.sh | sh
+
+<div class="strip">
+  <span>01 / <b>Setup</b></span>
+  <span>02 / <b>Profile</b></span>
+  <span>03 / <b>Advise</b></span>
+  <span>04 / <b>Provision</b></span>
+  <span>05 / <b>Run</b></span>
+</div>
+
+<!-- WHY -->
+<section id="why">
+  <div class="section-top">
+    <div><span class="tag">The everyday cost</span><h2>Stop paying for<br>the same context twice.</h2></div>
+    <p>Every new session or agent switch restarts cold — rescanning the repo, re-reading docs, re-guessing tools.</p>
+  </div>
+  <div class="roadmap">
+    <article class="card">
+      <span class="number">WITHOUT NOEVYRA</span>
+      <h3>Context gets rebuilt every time.</h3>
+      <ul class="list future">
+        <li><span>×</span> Re-explain architecture and constraints every session</li>
+        <li><span>×</span> Burn tokens on giant "just in case" prompts</li>
+        <li><span>×</span> Manually find and configure skills and MCPs per project</li>
+        <li><span>×</span> Re-setup profile when you switch from Claude to Kiro</li>
+        <li><span>×</span> Lose useful decisions when context compacts</li>
+      </ul>
+    </article>
+    <article class="card">
+      <span class="number">WITH NOEVYRA</span>
+      <h3>One setup. Every agent gets the head start.</h3>
+      <ul class="list">
+        <li><span>✓</span> Detect stack and persist profile with <code>brain setup</code></li>
+        <li><span>✓</span> Provision best-practice MCPs and skills automatically</li>
+        <li><span>✓</span> Compile only relevant evidence to a strict token budget</li>
+        <li><span>✓</span> Same brain works with Claude, Codex, Cursor and Kiro</li>
+        <li><span>✓</span> Verified decisions survive context resets and agent switches</li>
+      </ul>
+    </article>
+  </div>
+</section>
+
+<!-- SETUP FLOW -->
+<section id="setup">
+  <div class="section-top">
+    <div><span class="tag">New in v0.3.0</span><h2>brain setup:<br>one command, any project.</h2></div>
+    <p>Detects your stack, discovers matching capabilities from the catalog, provisions what you approve, and stores the profile — once.</p>
+  </div>
+  <div class="setup-flow">
+    <div class="flow-step"><div class="number">01 / DETECT</div><h4>Stack detection</h4><p>Scans up to 4 000 files. Parses manifests. Detects languages, frameworks, CI, database and deployment signals.</p></div>
+    <div class="flow-step"><div class="number">02 / DISCOVER</div><h4>Capability matching</h4><p>Queries the built-in catalog. Ranks up to 10 skills, MCPs and CLI tools by confidence. Labels network vs local requirements.</p></div>
+    <div class="flow-step"><div class="number">03 / PROVISION</div><h4>User-approved setup</h4><p>Writes MCP config to every installed agent client. Registers approved skills. Checks CLI tools in PATH.</p></div>
+    <div class="flow-step"><div class="number">04 / PERSIST</div><h4>Profile stored once</h4><p>Saves profile to local SQLite. Any agent launched with <code>brain run</code> reads the same profile — no re-detection.</p></div>
+  </div>
+  <div style="margin-top:24px" class="demo">
+    <div class="demo-head"><span class="demo-label">brain setup — example session</span><span class="tag">Interactive</span></div>
+    <div class="demo-pane" style="max-width:100%">
+<pre style="color:var(--text)"><span style="color:var(--accent)">$</span> brain setup
+
+Detected profile:
+  Languages:  go, typescript
+  Stacks:     gin, react, pgx
+  Signals:    ci-cd, database, git, github, web
+
+Available capabilities:
+   1. [mcp][network] GitHub MCP
+   2. [mcp][network] Documentation MCP
+   3. [mcp][network] Database MCP
+   4. [mcp][network] Browser MCP
+   5. [skill][network] Security Review Skill
+   6. [skill][local]   API Contract Skill
+   8. [cli][local]     ripgrep
+
+Select capabilities to provision (all/none/1,2,3): <span style="color:var(--accent)">1,3,6</span>
+
+Provisioning summary:
+  GitHub MCP           <span style="color:var(--green)">provisioned</span>
+  Database MCP         <span style="color:var(--green)">provisioned</span>
+  API Contract Skill   <span style="color:var(--green)">provisioned</span>
+
+Setup complete. Run 'brain setup --status' to inspect the stored profile.</pre>
+    </div>
+    <div class="demo-note">Profile persists in local SQLite. Switch from Claude to Kiro: same profile, no re-setup. Use <code>brain setup --refresh</code> after major dependency changes.</div>
+  </div>
+</section>
+
+<!-- AGENTS -->
+<section id="agents">
+  <div class="section-top">
+    <div><span class="tag">One interface, four agents</span><h2>Ask once.<br>Any agent picks it up.</h2></div>
+    <p>Launch any supported agent with a compiled context pack. The brain travels — not the session.</p>
+  </div>
+  <div class="demo">
+    <div class="demo-head">
+      <div class="tabs" role="group" aria-label="Choose agent">
+        <button type="button" data-agent="claude" aria-pressed="true">Claude</button>
+        <button type="button" data-agent="codex"  aria-pressed="false">Codex</button>
+        <button type="button" data-agent="cursor" aria-pressed="false">Cursor</button>
+        <button type="button" data-agent="kiro"   aria-pressed="false">Kiro</button>
+      </div>
+      <span class="tag">brain run</span>
+    </div>
+    <div class="demo-grid">
+      <div class="demo-pane">
+        <span class="demo-label">01 · Launch with compiled context</span>
+        <pre id="demo-command" aria-live="polite">brain run claude "Add rate limiting to the payments endpoint"</pre>
+        <button type="button" class="copy" id="copy-demo">Copy</button>
+        <p class="fine">Or call brain_advise from any MCP-compatible client.</p>
+      </div>
+      <div class="demo-pane">
+        <span class="demo-label">02 · What the pack carries</span>
+        <div class="context-row"><span>PROFILE</span><div>Detected stack from <code>brain setup</code> — no re-detection.</div></div>
+        <div class="context-row"><span>MEMORY</span><div>Verified decisions and project facts from your brain.</div></div>
+        <div class="context-row"><span>EVIDENCE</span><div>Attributed excerpts from your trusted sources.</div></div>
+        <div class="context-row"><span>TOOLS</span><div>Matching skills, MCPs and CLIs — with reasons.</div></div>
+      </div>
+    </div>
+    <div class="demo-note">Context file written at <code>0600</code> and deleted when the agent exits. Nothing is sent to any cloud service.</div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="section-top">
+    <div><span class="tag">Core capabilities</span><h2>A thinking layer,<br>not another chatbot.</h2></div>
+    <p>Deterministic, model-free, and fully inspectable. Every output is attributable and reviewable.</p>
+  </div>
+  <div class="cards">
+    <article class="card">
+      <span class="number">01 / REMEMBER</span>
+      <h3>Verified decisions survive sessions.</h3>
+      <p>Store decisions, conventions and facts with <code>brain remember</code>. Agent-proposed memories require your explicit approval. Nothing gets in verified without a human in the loop.</p>
+    </article>
+    <article class="card">
+      <span class="number">02 / ADVISE</span>
+      <h3>Token-budgeted intelligence packs.</h3>
+      <p><code>brain advise "task" --budget 1200</code> compiles a ranked, deduplicated pack of evidence, risks, verification steps and capability recommendations — all within an explicit token limit.</p>
+    </article>
+    <article class="card">
+      <span class="number">03 / LEARN</span>
+      <h3>Trusted source refresh, daily.</h3>
+      <p>Register any HTTPS Markdown source with <code>brain sources add</code>. Brain fetches conditionally, chunks locally, and keeps URL, hash and freshness metadata. Content stays inert evidence.</p>
+    </article>
+  </div>
+</section>
+
+<!-- ROADMAP -->
+<section id="roadmap">
+  <div class="section-top">
+    <div><span class="tag">Build in the open</span><h2>Useful baseline.<br>Measured evolution.</h2></div>
+    <p>v0.3.0 ships the auto-setup substrate and Kiro support. The roadmap is public and changes with evidence.</p>
+  </div>
+  <div class="roadmap">
+    <article class="card">
+      <h3><span class="ok">●</span> Available in v0.3.0</h3>
+      <ul class="list">
+        <li><span>✓</span> <code>brain setup</code> — auto-detect, provision, persist profile</li>
+        <li><span>✓</span> Kiro agent support in <code>brain run</code> and MCP config</li>
+        <li><span>✓</span> <code>brain update</code> — self-update from GitHub Releases</li>
+        <li><span>✓</span> Automated bump-and-release CI workflow</li>
+        <li><span>✓</span> Token-budgeted context compiler with feedback ranking</li>
+        <li><span>✓</span> Daily trusted-source refresh with provenance</li>
+      </ul>
+    </article>
+    <article class="card">
+      <h3>◌ Next experiments</h3>
+      <ul class="list future">
+        <li><span>→</span> Project identity handshake across MCP clients</li>
+        <li><span>→</span> Curated primary-source feed catalog</li>
+        <li><span>→</span> Session outcome extraction with review</li>
+        <li><span>→</span> Benchmark: recommendation precision and tokens saved</li>
+        <li><span>→</span> Skill version pinning</li>
+        <li><span>→</span> Cross-device sync</li>
+      </ul>
+    </article>
+  </div>
+</section>
+
+<!-- GET STARTED -->
+<section id="start" class="get-started">
+  <div>
+    <span class="tag">Made for people who ship</span>
+    <h2>A brain you can<br>inspect and trust.</h2>
+    <p>Built by Tommy / WolfCanCode. Noevyra remembers decisions, provisions the right tools, and turns both into compact guidance any agent can consume — without sending anything to the cloud.</p>
+    <p>v0.3.0 ships as a single verified binary. No Node, no Docker, no LLM required.</p>
+    <div class="actions">
+      <a class="btn" href="https://github.com/WolfCanCode/personal-ai-brain" target="_blank" rel="noopener noreferrer">GitHub ↗</a>
+      <a class="btn" href="https://github.com/WolfCanCode/personal-ai-brain/releases/tag/v0.3.0" target="_blank" rel="noopener noreferrer">Download v0.3.0 ↗</a>
+    </div>
+    <div class="author">
+      <span class="avatar">W</span>
+      <div>WolfCanCode<small>Building small. Thinking long-term.</small></div>
+    </div>
+  </div>
+  <div class="commands">
+    <div class="commands-top">
+      <span class="demo-label">Install · macOS / Linux</span>
+      <button class="copy" type="button" id="copy-install">Copy</button>
+    </div>
+    <pre id="install-command">curl -fsSL https://raw.githubusercontent.com/WolfCanCode/personal-ai-brain/main/install.sh | sh
 export PATH="$HOME/.local/bin:$PATH"
+
+# Initialise your store
 brain init
 
-# Optional: seed trusted sources and refresh them daily
-brain sources seed && brain sources sync
-brain init --schedule
+# Set up your project
+cd ~/your-project
+brain setup
 
-# Optional: pin a release
-curl -fsSL https://raw.githubusercontent.com/WolfCanCode/personal-ai-brain/main/install.sh | BRAIN_VERSION=v0.2.1 sh</pre><p class="fine">No Go or Node required · SHA-256 verified before installation.<br>Windows PowerShell installer is available in the repository.<br>Skills and MCPs are suggested, never silently installed or trusted.</p></div></section>
-</main><footer><span>© 2026 WolfCanCode · Noevyra</span><span>Intelligence that evolves. Locally.</span><a href="#main">Back to top ↑</a></footer>
+# Keep it fresh
+brain update</pre>
+    <p class="fine">No Go or Node required · SHA-256 verified · MIT<br>Already installed? Run <code>brain update</code> to upgrade.<br>Windows PowerShell installer available in the repository.</p>
+  </div>
+</section>
+
+</main>
+<footer>
+  <span>© 2025 WolfCanCode · Noevyra</span>
+  <span>Intelligence that evolves. Locally.</span>
+  <a href="#main">Back to top ↑</a>
+</footer>
 <script>
-const command=document.getElementById('demo-command');
-document.querySelectorAll('[data-agent]').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('[data-agent]').forEach(other=>other.setAttribute('aria-pressed',String(other===button)));command.textContent='brain run '+button.dataset.agent+' "Build the booking API"';}));
-async function copyText(button,element){const label=button.textContent;try{await navigator.clipboard.writeText(element.textContent);button.textContent='Copied ✓';}catch{button.textContent='Select text to copy';const selection=window.getSelection();const range=document.createRange();range.selectNodeContents(element);selection.removeAllRanges();selection.addRange(range);}setTimeout(()=>{button.textContent=label;},2200);}
-document.getElementById('copy-demo').addEventListener('click',event=>copyText(event.currentTarget,command));
-document.getElementById('copy-install').addEventListener('click',event=>copyText(event.currentTarget,document.getElementById('install-command')));
+const command = document.getElementById('demo-command');
+const tasks = {
+  claude: 'brain run claude "Add rate limiting to the payments endpoint"',
+  codex:  'brain run codex  "Add rate limiting to the payments endpoint"',
+  cursor: 'brain run cursor "Add rate limiting to the payments endpoint"',
+  kiro:   'brain run kiro   "Add rate limiting to the payments endpoint"',
+};
+document.querySelectorAll('[data-agent]').forEach(btn =>
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-agent]').forEach(b => b.setAttribute('aria-pressed', String(b === btn)));
+    command.textContent = tasks[btn.dataset.agent];
+  })
+);
+async function copyText(btn, el) {
+  const label = btn.textContent;
+  try {
+    await navigator.clipboard.writeText(el.textContent);
+    btn.textContent = 'Copied ✓';
+  } catch {
+    const sel = window.getSelection(), r = document.createRange();
+    r.selectNodeContents(el); sel.removeAllRanges(); sel.addRange(r);
+    btn.textContent = 'Select text to copy';
+  }
+  setTimeout(() => { btn.textContent = label; }, 2200);
+}
+document.getElementById('copy-demo').addEventListener('click', e => copyText(e.currentTarget, command));
+document.getElementById('copy-install').addEventListener('click', e => copyText(e.currentTarget, document.getElementById('install-command')));
 </script>
 </body>
 </html>
