@@ -30,7 +30,7 @@ nav{height:92px;display:flex;align-items:center;justify-content:space-between;bo
 .btn.primary{background:var(--accent);color:#181222;border-color:var(--accent)}
 .btn:hover{filter:brightness(1.1);border-color:var(--accent)}
 /* hero */
-.hero{padding:80px 0 56px;display:grid;grid-template-columns:1.1fr 1fr;gap:56px;align-items:center}
+.hero{padding:80px 0 60px;display:grid;grid-template-columns:1.15fr 0.85fr;gap:64px;align-items:center}
 .tag{font:11px/1 ui-monospace,monospace;letter-spacing:1.2px;text-transform:uppercase;color:var(--accent)}
 .pill{border:1px solid #514763;border-radius:100px;padding:6px 12px;display:inline-flex;align-items:center;gap:8px}
 .dot{width:6px;height:6px;border-radius:50%;background:var(--green)}
@@ -116,7 +116,7 @@ h3{font-size:17px;letter-spacing:-.3px;font-weight:700;margin:20px 0 8px}
 footer{display:flex;justify-content:space-between;gap:16px;padding-block:26px;color:var(--muted);font-size:11px}
 .skip{position:absolute;top:-100px}.skip:focus{top:10px;left:10px;background:var(--bg);padding:10px;z-index:9}
 @media(max-width:800px){.cards{grid-template-columns:1fr 1fr}.hero{gap:24px}.strip{flex-wrap:wrap}.get-started{gap:28px}.nav-links{gap:14px}.roadmap{grid-template-columns:1fr}}
-@media(max-width:620px){main,nav,footer{padding-inline:18px}nav{height:72px}.nav-links>a:not(:last-child){display:none}.hero{grid-template-columns:1fr;padding:44px 0;gap:32px}h1{font-size:52px;letter-spacing:-2.5px}.brand-visual::after{display:none}.section-top{display:block}.section-top p{margin-top:14px;max-width:none}.cards,.roadmap,.demo-grid,.get-started{grid-template-columns:1fr}.demo-pane+div{border-left:0;border-top:1px solid var(--line)}.demo-head{flex-direction:column;align-items:flex-start;gap:10px}section{padding:50px 0}h2{font-size:28px}footer{flex-wrap:wrap}}
+@media(max-width:620px){main,nav,footer{padding-inline:18px}nav{height:72px}.nav-links>a:not(:last-child){display:none}.hero{grid-template-columns:1fr;padding:44px 0;gap:32px}h1{font-size:52px;letter-spacing:-2.5px}.section-top{display:block}.section-top p{margin-top:14px;max-width:none}.cards,.roadmap,.demo-grid,.get-started{grid-template-columns:1fr}.demo-pane+div{border-left:0;border-top:1px solid var(--line)}.demo-head{flex-direction:column;align-items:flex-start;gap:10px}section{padding:50px 0}h2{font-size:28px}footer{flex-wrap:wrap}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 </style>
 </head>
@@ -149,7 +149,25 @@ footer{display:flex;justify-content:space-between;gap:16px;padding-block:26px;co
     <div class="fine">Go · SQLite FTS5 · MCP stdio · No LLM required · MIT</div>
   </div>
   <div class="brand-visual">
-    <img class="hero-logo" src="assets/noevyra-logo.jpg" alt="Noevyra" width="900" height="900">
+    <img class="hero-logo" src="assets/noevyra-logo.jpg" alt="Noevyra" width="560" height="560">
+    <div class="hero-stats">
+      <div class="stat">
+        <div class="stat-value accent">2,737</div>
+        <div class="stat-label">skills bundled</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">4</div>
+        <div class="stat-label">agents supported</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value accent">0</div>
+        <div class="stat-label">cloud dependencies</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">MIT</div>
+        <div class="stat-label">open source</div>
+      </div>
+    </div>
   </div>
 </div>
 
