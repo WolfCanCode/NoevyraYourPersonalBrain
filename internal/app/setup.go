@@ -191,8 +191,14 @@ func setupKeywords(profile intelligence.ProjectProfile) []string {
 // skillRefRe matches owner/repo@skill-name patterns in skills.sh output.
 var skillRefRe = regexp.MustCompile(`[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+@[a-zA-Z0-9_.-]+`)
 
+// ansiEscape matches ANSI terminal color/style sequences (e.g. \x1b[145m).
+// npx skills find colorises its output; these must be stripped before parsing
+// so that color codes like "145m" do not bleed into owner/repo names.
+var ansiEscape = regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]`)
+
 // parseSkillOutput extracts ProvisionableCapabilities from `npx skills find` output.
 func parseSkillOutput(raw, keyword string) []intelligence.ProvisionableCapability {
+	raw = ansiEscape.ReplaceAllString(raw, "") // strip terminal color codes
 	seen := map[string]bool{}
 	caps := []intelligence.ProvisionableCapability{}
 	for _, line := range strings.Split(raw, "\n") {
