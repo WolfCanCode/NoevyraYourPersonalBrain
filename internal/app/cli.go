@@ -188,12 +188,18 @@ func Run(args []string, version, commit, builtAt string, in io.Reader, out, errO
 			return errors.New("init accepts only --schedule")
 		}
 		// Auto-seed the embedded AAS skills catalog on first init.
+		// Report in the JSON result (not as a bare stdout line) so smoke tests
+		// and MCP clients can still JSON.parse the init output cleanly.
+		catalogSeeded := 0
 		if n, seedErr := intelligence.SeedEmbeddedCatalog(store); seedErr != nil {
 			fmt.Fprintf(errOut, "brain: catalog seed: %v\n", seedErr)
-		} else if n > 0 {
-			fmt.Fprintf(out, "Seeded %d skills from embedded AAS catalog.\n", n)
+		} else {
+			catalogSeeded = n
 		}
 		result := map[string]any{"database": store.Path, "scheduler": schedulerStatus()}
+		if catalogSeeded > 0 {
+			result["catalogSeeded"] = catalogSeeded
+		}
 		if f["--schedule"] != "" {
 			v, e := installScheduler(home)
 			if e != nil {
