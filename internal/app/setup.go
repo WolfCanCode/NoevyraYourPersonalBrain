@@ -15,6 +15,12 @@ import (
 	"github.com/WolfCanCode/personal-ai-brain/internal/memory"
 )
 
+// skillGroup holds skills from a single keyword search, displayed as one section.
+type skillGroup struct {
+	label string
+	caps  []intelligence.ProvisionableCapability
+}
+
 // projectRoot walks ancestor directories from cwd looking for a .git folder.
 // It checks cwd first, then up to 10 parent directories.
 // Returns cwd unchanged if no .git is found within that bound (Req 1.1, 1.7).
@@ -75,8 +81,14 @@ func promptConfirm(in io.Reader, out io.Writer, msg string) (bool, error) {
 
 // promptSelection prints a numbered capability list grouped by source and
 // reads the user's choice: "all", "none", or comma-separated indices.
-func promptSelection(in io.Reader, out io.Writer, catalog []intelligence.ProvisionableCapability, live []intelligence.ProvisionableCapability) ([]intelligence.ProvisionableCapability, error) {
-	all := append(catalog, live...)
+// catalog contains built-in MCP/skill entries; liveGroups contains per-keyword
+// sections returned by searchCatalogSkills.
+func promptSelection(in io.Reader, out io.Writer, catalog []intelligence.ProvisionableCapability, liveGroups []skillGroup) ([]intelligence.ProvisionableCapability, error) {
+	all := make([]intelligence.ProvisionableCapability, 0, len(catalog)+10)
+	all = append(all, catalog...)
+	for _, g := range liveGroups {
+		all = append(all, g.caps...)
+	}
 	if len(all) == 0 {
 		return nil, nil
 	}
@@ -88,11 +100,16 @@ func promptSelection(in io.Reader, out io.Writer, catalog []intelligence.Provisi
 			fmt.Fprintf(out, "    %2d. [%s][%s] %s\n        %s\n", i+1, cap.Kind, string(cap.Network), cap.Name, cap.Reason)
 		}
 	}
-	if len(live) > 0 {
-		fmt.Fprintln(out, "\n  From skills.sh:")
-		for i, cap := range live {
-			fmt.Fprintf(out, "    %2d. [skill][network] %s\n        %s\n", len(catalog)+i+1, cap.Name, cap.Reason)
+	offset := len(catalog)
+	for _, g := range liveGroups {
+		if len(g.caps) == 0 {
+			continue
 		}
+		fmt.Fprintf(out, "\n  %s:\n", g.label)
+		for i, cap := range g.caps {
+			fmt.Fprintf(out, "    %2d. [skill][network] %s\n        %s\n", offset+i+1, cap.Name, cap.Reason)
+		}
+		offset += len(g.caps)
 	}
 
 	fmt.Fprint(out, "\nSelect capabilities to provision (all/none/1,2,3): ")
@@ -233,23 +250,30 @@ func parseSkillOutput(raw, keyword string) []intelligence.ProvisionableCapabilit
 	return caps
 }
 
-// searchCatalogSkills queries the locally cached AAS skills catalog
-// (seeded by brain sources seed && brain sources sync) for the top 10
-// skills most relevant to the detected project profile.
+// searchCatalogSkills queries the locally cached AAS skills catalog per keyword,
+// returning at most 5 skills per keyword as separate labeled groups.
 // If the catalog has not been seeded it falls back to npx skills find
-// and prints a hint to seed the catalog.
-func searchCatalogSkills(profile intelligence.ProjectProfile, store *memory.Store, seen map[string]bool, out, errOut io.Writer, skipLive bool) []intelligence.ProvisionableCapability {
+// (also capped at 5 per keyword) and prints a seed hint.
+func searchCatalogSkills(profile intelligence.ProjectProfile, store *memory.Store, seen map[string]bool, out, errOut io.Writer, skipLive bool) []skillGroup {
+	const perKeyword = 5
+	keywords := setupKeywords(profile)
+	if len(keywords) == 0 {
+		return nil
+	}
+
 	seeded, err := intelligence.CatalogSeeded(store)
 	if err != nil {
 		fmt.Fprintf(errOut, "brain: catalog check failed: %v\n", err)
 	}
+
 	if seeded {
-		keywords := setupKeywords(profile)
-		query := strings.Join(keywords, " ")
-		results, searchErr := intelligence.SearchSkillsCatalog(store, query, 10)
-		if searchErr != nil {
-			fmt.Fprintf(errOut, "brain: catalog search failed: %v\n", searchErr)
-		} else {
+		groups := []skillGroup{}
+		for _, kw := range keywords {
+			results, searchErr := intelligence.SearchSkillsCatalog(store, kw, perKeyword)
+			if searchErr != nil {
+				fmt.Fprintf(errOut, "brain: catalog search for %q: %v\n", kw, searchErr)
+				continue
+			}
 			caps := []intelligence.ProvisionableCapability{}
 			for _, c := range results {
 				key := "skill:" + c.Ref
@@ -259,21 +283,26 @@ func searchCatalogSkills(profile intelligence.ProjectProfile, store *memory.Stor
 				seen[key] = true
 				caps = append(caps, c)
 			}
-			return caps
+			if len(caps) > 0 {
+				groups = append(groups, skillGroup{
+					label: fmt.Sprintf("From AAS catalog — %s (top %d)", kw, len(caps)),
+					caps:  caps,
+				})
+			}
 		}
+		return groups
 	}
-	// Catalog not seeded — print hint and optionally fall back to npx
+
+	// Catalog not seeded — hint and optional npx fallback
 	fmt.Fprintln(out, "  AAS skill catalog not found locally.")
 	fmt.Fprintln(out, "  Run 'brain sources seed && brain sources sync' to index 2 700+ skills for offline search.")
 	if skipLive {
 		return nil
 	}
-	// npx fallback
 	if _, lookErr := exec.LookPath("npx"); lookErr != nil {
 		return nil
 	}
-	keywords := setupKeywords(profile)
-	caps := []intelligence.ProvisionableCapability{}
+	groups := []skillGroup{}
 	for _, kw := range keywords {
 		fmt.Fprintf(out, "  Searching skills.sh for %q (npx fallback)…\n", kw)
 		raw, npxErr := external("npx", []string{"--yes", "skills", "find", kw})
@@ -281,7 +310,12 @@ func searchCatalogSkills(profile intelligence.ProjectProfile, store *memory.Stor
 			fmt.Fprintf(errOut, "brain: npx skills find %q: %v\n", kw, npxErr)
 			continue
 		}
-		for _, c := range parseSkillOutput(raw, kw) {
+		all := parseSkillOutput(raw, kw)
+		if len(all) > perKeyword {
+			all = all[:perKeyword]
+		}
+		caps := []intelligence.ProvisionableCapability{}
+		for _, c := range all {
 			key := "skill:" + c.Ref
 			if seen[key] {
 				continue
@@ -289,8 +323,14 @@ func searchCatalogSkills(profile intelligence.ProjectProfile, store *memory.Stor
 			seen[key] = true
 			caps = append(caps, c)
 		}
+		if len(caps) > 0 {
+			groups = append(groups, skillGroup{
+				label: fmt.Sprintf("From skills.sh — %s (top %d)", kw, len(caps)),
+				caps:  caps,
+			})
+		}
 	}
-	return caps
+	return groups
 }
 
 // ── Main setup handler ───────────────────────────────────────────────────────
@@ -378,13 +418,17 @@ func runSetup(store *memory.Store, project memory.Project, args []string, in io.
 	for _, c := range catalogCaps {
 		seen[c.Kind+":"+c.Ref] = true
 	}
-	var liveCaps []intelligence.ProvisionableCapability
+	var liveGroups []skillGroup
 	if len(setupKeywords(profile)) > 0 {
 		fmt.Fprintln(out, "\nSearching AAS skill catalog…")
-		liveCaps = searchCatalogSkills(profile, store, seen, out, errOut, skipLive)
+		liveGroups = searchCatalogSkills(profile, store, seen, out, errOut, skipLive)
 	}
 
-	if len(catalogCaps) == 0 && len(liveCaps) == 0 {
+	totalLive := 0
+	for _, g := range liveGroups {
+		totalLive += len(g.caps)
+	}
+	if len(catalogCaps) == 0 && totalLive == 0 {
 		fmt.Fprintln(out, "\nNo capabilities matched the detected project profile.")
 	}
 
@@ -393,11 +437,16 @@ func runSetup(store *memory.Store, project memory.Project, args []string, in io.
 		for i, cap := range catalogCaps {
 			fmt.Fprintf(out, "  %2d. [%s][%s] %s\n", i+1, cap.Kind, string(cap.Network), cap.Name)
 		}
-		if len(liveCaps) > 0 {
-			fmt.Fprintln(out, "\n[dry-run] skills from skills.sh:")
-			for i, cap := range liveCaps {
-				fmt.Fprintf(out, "  %2d. [skill][network] %s\n", len(catalogCaps)+i+1, cap.Name)
+		offset := len(catalogCaps)
+		for _, g := range liveGroups {
+			if len(g.caps) == 0 {
+				continue
 			}
+			fmt.Fprintf(out, "\n[dry-run] %s:\n", g.label)
+			for i, cap := range g.caps {
+				fmt.Fprintf(out, "  %2d. [skill][network] %s\n", offset+i+1, cap.Name)
+			}
+			offset += len(g.caps)
 		}
 		fmt.Fprintln(out, "\n[dry-run] no files or database records were written.")
 		return nil
@@ -408,7 +457,7 @@ func runSetup(store *memory.Store, project memory.Project, args []string, in io.
 	if err != nil {
 		return err
 	}
-	selected, err := promptSelection(in, out, catalogCaps, liveCaps)
+	selected, err := promptSelection(in, out, catalogCaps, liveGroups)
 	if err != nil {
 		return err
 	}
