@@ -613,6 +613,10 @@ func runSetup(store *memory.Store, project memory.Project, args []string, in io.
 		seen[c.Kind+":"+c.Ref] = true
 	}
 
+	// Silently seed the embedded catalog if the store has never been synced.
+	// This makes skill suggestions work immediately without any manual step.
+	_, _ = intelligence.SeedEmbeddedCatalog(store)
+
 	var liveGroups []skillGroup
 	if len(setupKeywords(profile)) > 0 {
 		if isTTY() {

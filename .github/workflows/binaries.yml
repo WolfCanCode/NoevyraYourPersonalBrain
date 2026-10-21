@@ -71,6 +71,11 @@ jobs:
         run: |
           npm test
           npm run check
+      - name: Refresh embedded AAS skills catalog
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/sickn33/agentic-awesome-skills/main/skills_index.json \
+            -o internal/intelligence/skills_index.json
+          echo "Catalog size: $(wc -c < internal/intelligence/skills_index.json) bytes"
       - name: Build self-contained executable
         env:
           CGO_ENABLED: '0'

@@ -187,6 +187,12 @@ func Run(args []string, version, commit, builtAt string, in io.Reader, out, errO
 		if len(pos) > 0 {
 			return errors.New("init accepts only --schedule")
 		}
+		// Auto-seed the embedded AAS skills catalog on first init.
+		if n, seedErr := intelligence.SeedEmbeddedCatalog(store); seedErr != nil {
+			fmt.Fprintf(errOut, "brain: catalog seed: %v\n", seedErr)
+		} else if n > 0 {
+			fmt.Fprintf(out, "Seeded %d skills from embedded AAS catalog.\n", n)
+		}
 		result := map[string]any{"database": store.Path, "scheduler": schedulerStatus()}
 		if f["--schedule"] != "" {
 			v, e := installScheduler(home)
@@ -472,6 +478,8 @@ func skills(s *memory.Store, args []string, out io.Writer) error {
 			return errors.New("search term required")
 		}
 		query := strings.Join(args, " ")
+		// Silently seed from embedded catalog if not yet populated.
+		_, _ = intelligence.SeedEmbeddedCatalog(s)
 		seeded, seedErr := intelligence.CatalogSeeded(s)
 		if seedErr == nil && seeded {
 			caps, searchErr := intelligence.SearchSkillsCatalog(s, query, 10)
