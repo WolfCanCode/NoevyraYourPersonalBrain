@@ -170,22 +170,32 @@ func buildSessionEvent(results []intelligence.ProvisionResult) map[string]any {
 
 // ── Live skill search via skills.sh ─────────────────────────────────────────
 
-// setupKeywords returns at most 2 search keywords derived from the project
-// profile, prioritising specific framework signals over generic language names.
-// These are passed to `npx skills find` to retrieve relevant community skills.
+// setupKeywords returns up to 3 search keywords for the project, ordered from
+// most specific (framework) to most generic (language, then operational signal).
+// It checks Signals + Languages + Stacks — but only returns terms that appear
+// in keywordPriority, so raw dep names (zone.js, karma, ...) never leak through.
 var keywordPriority = []string{
-	// Framework signals (most specific — detected from package deps)
-	"angular", "react", "vue", "svelte", "nextjs", "nestjs",
+	// JS/TS framework signals (injected into Signals by profile.go)
+	"angular", "react", "vue", "svelte", "nextjs",
 	"graphql", "storybook", "tailwind", "redux",
-	// Language-level signals
-	"go", "rust", "python",
-	// Generic (only if nothing more specific matched)
+	// JVM / server-side framework names (appear in Stacks from pom.xml / build.gradle)
+	"spring", "nestjs", "gin", "fiber", "echo",
+	// Python framework names (appear in Stacks from requirements.txt / pyproject.toml)
+	"django", "fastapi", "flask", "pytorch", "tensorflow",
+	// Ruby / PHP / .NET
+	"rails", "laravel", "symfony",
+	// Languages — specific ones first so java beats javascript for JVM projects
+	"java", "kotlin", "scala",
+	"go", "rust", "python", "ruby", "php", "swift",
+	// Generic web languages (last resort for pure JS/TS projects)
 	"typescript", "javascript",
 	// Operational signals
 	"api", "database", "security", "containers",
 }
 
 func setupKeywords(profile intelligence.ProjectProfile) []string {
+	// Build a term set from ALL three profile fields.
+	// keywordPriority acts as an allowlist so raw dep names never leak through.
 	sigSet := map[string]bool{}
 	for _, v := range profile.Signals {
 		sigSet[strings.ToLower(v)] = true
@@ -193,13 +203,32 @@ func setupKeywords(profile intelligence.ProjectProfile) []string {
 	for _, v := range profile.Languages {
 		sigSet[strings.ToLower(v)] = true
 	}
+	for _, v := range profile.Stacks {
+		sigSet[strings.ToLower(v)] = true
+	}
+	// mutualExclusions: if a more specific language/stack is already chosen,
+	// skip generic alternatives that would produce irrelevant results.
+	// e.g. a Java project with a few .js build scripts should not search "javascript".
+	excludeIfPresent := map[string][]string{
+		"java":       {"javascript", "typescript"},
+		"kotlin":     {"javascript", "typescript"},
+		"scala":      {"javascript", "typescript"},
+		"python":     {"javascript", "typescript"},
+		"ruby":       {"javascript", "typescript"},
+		"php":        {"javascript", "typescript"},
+		"typescript": {"javascript"},
+	}
+	// Collect ALL matched keywords in priority order — no hard cap.
+	// The caller decides how many to use (catalog uses all; npx fallback limits to 3).
 	result := []string{}
+	excluded := map[string]bool{}
 	for _, kw := range keywordPriority {
-		if sigSet[kw] {
-			result = append(result, kw)
-			if len(result) == 2 {
-				break
-			}
+		if excluded[kw] || !sigSet[kw] {
+			continue
+		}
+		result = append(result, kw)
+		for _, ex := range excludeIfPresent[kw] {
+			excluded[ex] = true
 		}
 	}
 	return result
@@ -302,8 +331,13 @@ func searchCatalogSkills(profile intelligence.ProjectProfile, store *memory.Stor
 	if _, lookErr := exec.LookPath("npx"); lookErr != nil {
 		return nil
 	}
+	// Limit npx to 3 keywords — each is a separate network call
+	npxKeywords := keywords
+	if len(npxKeywords) > 3 {
+		npxKeywords = npxKeywords[:3]
+	}
 	groups := []skillGroup{}
-	for _, kw := range keywords {
+	for _, kw := range npxKeywords {
 		fmt.Fprintf(out, "  Searching skills.sh for %q (npx fallback)…\n", kw)
 		raw, npxErr := external("npx", []string{"--yes", "skills", "find", kw})
 		if npxErr != nil {
