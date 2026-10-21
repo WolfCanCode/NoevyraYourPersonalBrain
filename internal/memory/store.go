@@ -74,6 +74,12 @@ CREATE TRIGGER IF NOT EXISTS knowledge_fts_ad AFTER DELETE ON knowledge_items BE
 CREATE TRIGGER IF NOT EXISTS knowledge_fts_au AFTER UPDATE OF title,content,tags ON knowledge_items BEGIN
  INSERT INTO knowledge_fts(knowledge_fts,rowid,title,content,tags) VALUES('delete',old.rowid,old.title,old.content,old.tags);
  INSERT INTO knowledge_fts(rowid,title,content,tags) VALUES(new.rowid,new.title,new.content,new.tags); END;
+CREATE TABLE IF NOT EXISTS project_profiles (
+ id TEXT PRIMARY KEY, project_id TEXT NOT NULL, root TEXT NOT NULL,
+ profile_json TEXT NOT NULL, capabilities_json TEXT NOT NULL DEFAULT '[]',
+ created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_project_profiles_pid_ts ON project_profiles(project_id,created_at);
 `
 
 type Store struct {
@@ -107,6 +113,14 @@ type Skill struct {
 	Ref        string `json:"ref"`
 	Keyword    string `json:"keyword"`
 	ApprovedAt string `json:"approved_at"`
+}
+type StoredProfile struct {
+	ID               string `json:"id"`
+	ProjectID        string `json:"projectId"`
+	Root             string `json:"root"`
+	ProfileJSON      string `json:"-"`
+	CapabilitiesJSON string `json:"-"`
+	CreatedAt        string `json:"createdAt"`
 }
 
 func Home() (string, error) {
@@ -194,8 +208,8 @@ func Open(home string) (*Store, error) {
 	if err = tx.QueryRow("PRAGMA user_version").Scan(&version); err != nil {
 		return fail(err)
 	}
-	if version > 2 {
-		return fail(fmt.Errorf("database schema %d is newer than supported version 2", version))
+	if version > 3 {
+		return fail(fmt.Errorf("database schema %d is newer than supported version 3", version))
 	}
 	if _, err = tx.Exec(schema); err != nil {
 		return fail(err)
@@ -212,7 +226,10 @@ func Open(home string) (*Store, error) {
 			return fail(err)
 		}
 	}
-	if _, err = tx.Exec(`PRAGMA user_version=2;`); err != nil {
+	if version < 3 {
+		// No data migration required; CREATE TABLE IF NOT EXISTS handles schema creation.
+	}
+	if _, err = tx.Exec(`PRAGMA user_version=3;`); err != nil {
 		return fail(err)
 	}
 	if err = tx.Commit(); err != nil {
@@ -473,4 +490,49 @@ func (s *Store) Skills() ([]Skill, error) {
 		out = append(out, item)
 	}
 	return out, rows.Err()
+}
+
+// UpsertProfile persists a new StoredProfile for the given project. When the project
+// already has 3 stored profiles, the oldest is deleted before inserting (Req 2.1, 2.3, 2.8).
+func (s *Store) UpsertProfile(projectID, root, profileJSON, capabilitiesJSON string) (StoredProfile, error) {
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return StoredProfile{}, err
+	}
+	defer tx.Rollback()
+	var count int
+	if err = tx.QueryRow("SELECT count(*) FROM project_profiles WHERE project_id=?", projectID).Scan(&count); err != nil {
+		return StoredProfile{}, err
+	}
+	if count >= 3 {
+		if _, err = tx.Exec("DELETE FROM project_profiles WHERE id=(SELECT id FROM project_profiles WHERE project_id=? ORDER BY created_at ASC LIMIT 1)", projectID); err != nil {
+			return StoredProfile{}, err
+		}
+	}
+	id, err := ID()
+	if err != nil {
+		return StoredProfile{}, err
+	}
+	at := now()
+	if _, err = tx.Exec("INSERT INTO project_profiles(id,project_id,root,profile_json,capabilities_json,created_at) VALUES(?,?,?,?,?,?)", id, projectID, root, profileJSON, capabilitiesJSON, at); err != nil {
+		return StoredProfile{}, err
+	}
+	if err = tx.Commit(); err != nil {
+		return StoredProfile{}, err
+	}
+	return StoredProfile{ID: id, ProjectID: projectID, Root: root, ProfileJSON: profileJSON, CapabilitiesJSON: capabilitiesJSON, CreatedAt: at}, nil
+}
+
+// LatestProfile returns the most recently created StoredProfile for projectID,
+// or (nil, nil) if none exists (Req 2.4, 7.1, 7.2).
+func (s *Store) LatestProfile(projectID string) (*StoredProfile, error) {
+	var p StoredProfile
+	err := s.DB.QueryRow("SELECT id,project_id,root,profile_json,capabilities_json,created_at FROM project_profiles WHERE project_id=? ORDER BY created_at DESC LIMIT 1", projectID).Scan(&p.ID, &p.ProjectID, &p.Root, &p.ProfileJSON, &p.CapabilitiesJSON, &p.CreatedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &p, nil
 }

@@ -16,8 +16,8 @@ After merging tested changes into `main`, create and push a semantic version tag
 ```sh
 git checkout main
 git pull --ff-only
-git tag v0.2.1
-git push origin v0.2.1
+git tag v0.3.0
+git push origin v0.3.0
 ```
 
 `release.yml` validates the tag, reruns the entire build/test matrix and publishes only if every target passes. GitHub generates release notes from the changes, PRs and contributors since the preceding release, categorized by `.github/release.yml`. Tags such as `v0.2.1-rc.1` create prereleases. No PAT or external release action is required; only the publish job receives `contents: write`.

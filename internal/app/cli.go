@@ -38,7 +38,9 @@ Usage:
   brain skills find "query"           Explicit skills.sh discovery (requires npx)
   brain skills trust owner/repo@skill --keyword term
   brain skills list
-  brain run claude|codex|cursor [task] Launch an installed agent with private context
+  brain run claude|codex|cursor|kiro [task] Launch an installed agent with private context
+  brain setup [--refresh|--dry-run|--status] Detect project, provision capabilities, manage stored profile
+  brain update [--check]              Download and install the latest release; --check only reports
   brain mcp                          MCP server over stdio
   brain mcp-config                   Native MCP launch configuration
   brain doctor                       Show prerequisites
@@ -118,7 +120,7 @@ func Run(args []string, version, commit, builtAt string, in io.Reader, out, errO
 		}
 		return printJSON(out, v)
 	}
-	allowed := map[string]bool{"init": true, "remember": true, "recall": true, "context": true, "profile": true, "advise": true, "feedback": true, "sources": true, "approve": true, "status": true, "digest": true, "sync": true, "skills": true, "run": true, "doctor": true, "mcp": true}
+	allowed := map[string]bool{"init": true, "remember": true, "recall": true, "context": true, "profile": true, "advise": true, "feedback": true, "sources": true, "approve": true, "status": true, "digest": true, "sync": true, "skills": true, "run": true, "doctor": true, "mcp": true, "setup": true, "update": true}
 	if !allowed[cmd] {
 		return fmt.Errorf("unknown command %q; run brain help", cmd)
 	}
@@ -126,9 +128,12 @@ func Run(args []string, version, commit, builtAt string, in io.Reader, out, errO
 	if err != nil {
 		return err
 	}
+	if cmd == "update" {
+		return runUpdate(version, args, out, errOut)
+	}
 	if cmd == "doctor" {
 		commands := map[string]bool{}
-		for _, bin := range []string{"git", "claude", "codex", "cursor-agent", "npx"} {
+		for _, bin := range []string{"git", "claude", "codex", "cursor-agent", "kiro", "npx"} {
 			_, e := exec.LookPath(bin)
 			commands[bin] = e == nil
 		}
@@ -320,6 +325,8 @@ func Run(args []string, version, commit, builtAt string, in io.Reader, out, errO
 		return skills(store, args, out)
 	case "run":
 		return runAgent(store, project, args, in, out, errOut, home)
+	case "setup":
+		return runSetup(store, project, args, in, out, errOut, home)
 	}
 	return errors.New("unhandled command")
 }
@@ -450,9 +457,18 @@ func skills(s *memory.Store, args []string, out io.Writer) error {
 	return errors.New("use skills find|trust|list")
 }
 func runAgent(s *memory.Store, p memory.Project, args []string, in io.Reader, out, errOut io.Writer, home string) error {
-	binaries := map[string]string{"claude": "claude", "codex": "codex", "cursor": "cursor-agent"}
+	binaries := map[string]string{"claude": "claude", "codex": "codex", "cursor": "cursor-agent", "kiro": "kiro"}
 	if len(args) == 0 || binaries[args[0]] == "" {
-		return errors.New("use brain run claude|codex|cursor [task]")
+		return errors.New("use brain run claude|codex|cursor|kiro [task]")
+	}
+	agentBin := binaries[args[0]]
+	if _, lookErr := exec.LookPath(agentBin); lookErr != nil {
+		if args[0] == "kiro" {
+			fmt.Fprintln(errOut, "brain: kiro executable not found in PATH; install the Kiro CLI and ensure it is accessible before retrying")
+		} else {
+			fmt.Fprintf(errOut, "brain: %s not found in PATH\n", agentBin)
+		}
+		return lookErr
 	}
 	agent := args[0]
 	task := strings.Join(args[1:], " ")
@@ -500,7 +516,7 @@ func runAgent(s *memory.Store, p memory.Project, args []string, in io.Reader, ou
 	if _, err = s.Log("agent_started", p.ID, map[string]any{"agent": agent, "task": task}); err != nil {
 		return err
 	}
-	cmd := exec.Command(binaries[agent], commandArgs...)
+	cmd := exec.Command(agentBin, commandArgs...)
 	cmd.Stdin = in
 	cmd.Stdout = out
 	cmd.Stderr = errOut

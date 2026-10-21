@@ -64,23 +64,6 @@ type Pack struct {
 	Note            string           `json:"note"`
 }
 
-type capability struct {
-	kind, ref, reason string
-	triggers          []string
-}
-
-var capabilityCatalog = []capability{
-	{"mcp", "github", "Inspect issues, pull requests, commits and CI state without pasting repository history.", []string{"github", "github-actions", "ci-cd", "issue", "pull", "request", "release"}},
-	{"mcp", "browser", "Verify browser behavior and UI state instead of reasoning from screenshots or assumptions.", []string{"browser", "web", "frontend", "ui", "e2e", "playwright"}},
-	{"mcp", "figma", "Read design structure and tokens when implementation depends on a Figma source of truth.", []string{"figma", "design", "ui", "component", "frontend"}},
-	{"mcp", "database", "Inspect schema and query results directly when database evidence is needed.", []string{"database", "sql", "postgres", "mysql", "sqlite", "migration"}},
-	{"mcp", "documentation", "Retrieve current primary documentation instead of loading broad or stale framework knowledge.", []string{"go", "rust", "python", "typescript", "javascript", "react", "vue", "angular", "spring", "api", "mcp"}},
-	{"skill", "security-review", "Apply a focused threat-model and unsafe-input checklist before shipping security-sensitive changes.", []string{"auth", "security", "secret", "token", "permission", "webhook", "payment"}},
-	{"skill", "test-strategy", "Select the smallest useful unit, integration and end-to-end checks for the change.", []string{"test", "bug", "refactor", "ci", "release"}},
-	{"skill", "api-contract", "Keep request, response and compatibility constraints explicit across services.", []string{"api", "backend", "schema", "contract", "mcp", "grpc", "rest"}},
-	{"cli", "ripgrep", "Locate project evidence with low latency and low context overhead.", []string{"code", "refactor", "bug", "project"}},
-}
-
 var termPattern = regexp.MustCompile(`[\p{L}\p{N}_-]+`)
 
 func nowUTC() string { return time.Now().UTC().Format("2006-01-02T15:04:05.000Z") }
@@ -134,9 +117,9 @@ func capabilityRecommendations(store *memory.Store, task string, profile Project
 	wanted := terms(all...)
 	recommendations := []Recommendation{}
 	seen := map[string]bool{}
-	for _, item := range capabilityCatalog {
+	for _, item := range ProvisionCatalog {
 		hits := []string{}
-		for _, trigger := range item.triggers {
+		for _, trigger := range item.TriggerSignals {
 			if wanted[trigger] {
 				hits = append(hits, trigger)
 			}
@@ -145,8 +128,8 @@ func capabilityRecommendations(store *memory.Store, task string, profile Project
 			continue
 		}
 		confidence := math.Round(math.Min(0.95, 0.45+float64(len(hits))*0.12)*100) / 100
-		recommendations = append(recommendations, Recommendation{item.kind, item.ref, item.reason + " Signals: " + strings.Join(hits, ", ") + ".", confidence, false})
-		seen[item.kind+":"+item.ref] = true
+		recommendations = append(recommendations, Recommendation{item.Kind, item.Ref, item.Reason + " Signals: " + strings.Join(hits, ", ") + ".", confidence, false})
+		seen[item.Kind+":"+item.Ref] = true
 	}
 	approved, err := store.Skills()
 	if err != nil {

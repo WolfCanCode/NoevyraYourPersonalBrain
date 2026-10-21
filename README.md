@@ -12,7 +12,7 @@ Noevyra is a local-first thinking layer for coding agents. It remembers reviewed
 
 Noevyra does not try to become another code-graph engine. When deep impact analysis is worth its cost, a future optional provider can supply bounded structural facts; Noevyra remains responsible for deciding whether those facts matter now. The core stays useful and fully functional without a graph provider. See [ADR 0003](docs/adr/0003-external-structural-intelligence.md).
 
-> **Status: v0.2.1 released** with deterministic project profiling, opted-in daily trusted-source refresh, token-budgeted context compilation, explainable capability recommendations and feedback-weighted ranking. Noevyra is not an autonomous agent and does not execute remote instructions.
+> **Status: v0.3.0 released** with auto-project setup (`brain setup`), persistent project profiles, capability provisioning, Kiro agent support, and a self-update command (`brain update`). Noevyra is not an autonomous agent and does not execute remote instructions.
 
 ## Why this exists
 
@@ -53,7 +53,7 @@ export PATH="$HOME/.local/bin:$PATH"
 brain init
 ```
 
-The installer detects OS/architecture, downloads the matching GitHub Release archive, verifies it against the published `SHA256SUMS`, and installs to `~/.local/bin` without `sudo`. Pin a release with `BRAIN_VERSION=v0.2.1`, or choose a destination with `BRAIN_INSTALL_DIR=/path/to/bin`. On Windows PowerShell:
+The installer detects OS/architecture, downloads the matching GitHub Release archive, verifies it against the published `SHA256SUMS`, and installs to `~/.local/bin` without `sudo`. Pin a release with `BRAIN_VERSION=v0.3.0`, or choose a destination with `BRAIN_INSTALL_DIR=/path/to/bin`. On Windows PowerShell:
 
 ```powershell
 irm https://raw.githubusercontent.com/WolfCanCode/personal-ai-brain/main/install.ps1 | iex
@@ -131,6 +131,8 @@ brain run claude "Implement payment webhook"
 | `brain digest --days 7` | Recent memories and events |
 | `brain mcp` | Start MCP server over stdio |
 | `brain mcp-config` | Print MCP server configuration JSON |
+| `brain update` | Download and install the latest GitHub Release |
+| `brain update --check` | Report whether a newer release is available |
 | `brain doctor` | Local dependency diagnostics |
 
 ## Connect the MCP gateway

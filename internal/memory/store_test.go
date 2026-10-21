@@ -137,3 +137,132 @@ func BenchmarkRecall(b *testing.B) {
 		}
 	}
 }
+
+// ─── Tasks 1.4 & 1.5: project_profiles persistence tests ──────────────────
+
+// Feature: auto-project-setup, Property 2: Profile store count never exceeds three per project.
+// Validates: Requirement 2.3
+func TestUpsertProfileNeverExceedsThree(t *testing.T) {
+	// Property test: for any project ID and N ≥ 1 UpsertProfile calls,
+	// the row count for that project never exceeds 3.
+	s := testStore(t)
+	const projID = "prop-test-project"
+	for n := 1; n <= 10; n++ {
+		if _, err := s.UpsertProfile(projID, "/root", `{"root":"/root"}`, "[]"); err != nil {
+			t.Fatalf("UpsertProfile call %d: %v", n, err)
+		}
+		var count int
+		if err := s.DB.QueryRow("SELECT count(*) FROM project_profiles WHERE project_id=?", projID).Scan(&count); err != nil {
+			t.Fatal(err)
+		}
+		if count > 3 {
+			t.Fatalf("after %d calls count=%d, want ≤3", n, count)
+		}
+	}
+}
+
+// Validates: Requirements 2.1, 2.3, 2.4, 2.8
+func TestUpsertProfileAndLatest(t *testing.T) {
+	s := testStore(t)
+	const projID = "upsert-test"
+	roots := []string{"/a", "/b", "/c"}
+	for _, root := range roots {
+		if _, err := s.UpsertProfile(projID, root, `{"root":"`+root+`"}`, "[]"); err != nil {
+			t.Fatalf("UpsertProfile(%q): %v", root, err)
+		}
+	}
+	latest, err := s.LatestProfile(projID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if latest == nil {
+		t.Fatal("expected non-nil StoredProfile")
+	}
+	if latest.ProjectID != projID {
+		t.Errorf("ProjectID=%q, want %q", latest.ProjectID, projID)
+	}
+	if latest.Root != "/c" {
+		t.Errorf("Root=%q, want /c (the most recent)", latest.Root)
+	}
+}
+
+func TestUpsertProfileEvictsOldest(t *testing.T) {
+	s := testStore(t)
+	const projID = "evict-test"
+	var firstID string
+	for i := 0; i < 4; i++ {
+		sp, err := s.UpsertProfile(projID, "/root", `{}`, "[]")
+		if err != nil {
+			t.Fatalf("UpsertProfile %d: %v", i, err)
+		}
+		if i == 0 {
+			firstID = sp.ID
+		}
+		// Ensure distinct created_at by inserting a tiny sleep
+		time.Sleep(2 * time.Millisecond)
+	}
+	var count int
+	if err := s.DB.QueryRow("SELECT count(*) FROM project_profiles WHERE project_id=?", projID).Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	if count != 3 {
+		t.Errorf("count=%d after 4 inserts, want 3", count)
+	}
+	var exists int
+	if err := s.DB.QueryRow("SELECT count(*) FROM project_profiles WHERE id=?", firstID).Scan(&exists); err != nil {
+		t.Fatal(err)
+	}
+	if exists != 0 {
+		t.Error("first (oldest) profile was not evicted")
+	}
+}
+
+func TestLatestProfileNilWhenMissing(t *testing.T) {
+	s := testStore(t)
+	p, err := s.LatestProfile("nonexistent-project")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if p != nil {
+		t.Errorf("expected nil, got %+v", p)
+	}
+}
+
+func TestSchemaV3Migration(t *testing.T) {
+	dir := t.TempDir()
+	s, err := Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.Close()
+	// Reopen to confirm table still accessible
+	s2, err := Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s2.Close()
+	var n int
+	if err := s2.DB.QueryRow("SELECT count(*) FROM project_profiles").Scan(&n); err != nil {
+		t.Fatalf("project_profiles not accessible after reopen: %v", err)
+	}
+}
+
+func TestVersionGuardV3(t *testing.T) {
+	s := testStore(t)
+	path := s.Path
+	s.Close()
+	// Manually set user_version to 4 (future schema).
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = db.Exec("PRAGMA user_version=4"); err != nil {
+		db.Close()
+		t.Fatal(err)
+	}
+	db.Close()
+	_, openErr := Open(filepath.Dir(path))
+	if openErr == nil {
+		t.Fatal("expected error opening newer schema, got nil")
+	}
+}
