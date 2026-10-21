@@ -8,6 +8,8 @@ Native Go preview adds `cmd/brain` (process entry), `internal/app` (CLI, MCP and
 
 The v0.2 intelligence layer lives in `internal/intelligence`: bounded project profiling, explicitly trusted text-source synchronization, token-budgeted evidence compilation, explainable capability routing and feedback-weighted knowledge ranking. It remains model-free and provider-neutral. See [ADR 0002](adr/0002-intelligence-substrate.md).
 
+Structural intelligence such as code graphs is an optional external capability, not a core index or storage dependency. Noevyra will own routing, trust, budgets and evidence normalization; a provider owns parsing, indexing and language-specific accuracy. The core must work unchanged without a provider. The first planned milestone is a registry that recommends reviewed providers without executing them. See [ADR 0003](adr/0003-external-structural-intelligence.md).
+
 Keep dependencies pointing inward: adapters call storage policy; storage never launches agents or invokes a model. Migration, FTS rebuild, and maintenance updates use transactions. WAL, a busy timeout, and one pooled connection per process avoid accidental per-connection pragma differences. SQL parameters carry user values; FTS tokens are quoted. Operational errors are returned instead of silently degrading search.
 
 Best practices are adopted from primary sources with a reason and a compatibility test, not copied indiscriminately from agent frameworks. Prefer local data, explicit trust transitions, bounded protocol messages/subprocess output, opt-in external execution, minimal workflow permissions and SHA-pinned actions. The opted-in daily timer refreshes registered sources with conditional requests; it never installs or executes fetched instructions.
@@ -28,6 +30,7 @@ Best practices are adopted from primary sources with a reason and a compatibilit
 | Remote LLM output | Untrusted | No automatic skill promotion |
 | Explicitly registered HTTPS source | Trusted provenance, untrusted content | Bounded text retrieval and attributed context only |
 | Project files and manifests | Untrusted evidence | Bounded read-only profiling; never interpreted as control instructions |
+| Optional structural provider output | Untrusted evidence | Validated, attributed and token-capped facts; never automatic memory or instructions |
 
 ## Known limitations
 
@@ -40,4 +43,4 @@ Best practices are adopted from primary sources with a reason and a compatibilit
 
 ## Planned next architecture milestone
 
-Measure recommendation precision, tokens per successful task and repeated-context reduction. Then add a curated primary-source feed catalog, source-specific extractors, project identity handshake and evaluated skill promotion. Any model-assisted reranker must beat the deterministic baseline before becoming a default.
+Measure recommendation precision, tokens per successful task and repeated-context reduction. Then add a curated primary-source feed catalog, source-specific extractors, project identity handshake and evaluated skill promotion. A registry-only structural-provider specification may recommend explicitly reviewed integrations; provider execution remains a later, separately tested decision. Any model-assisted reranker or structural provider must beat the deterministic baseline on representative tasks before becoming a default.
