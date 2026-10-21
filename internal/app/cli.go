@@ -39,7 +39,7 @@ Usage:
   brain skills trust owner/repo@skill --keyword term
   brain skills list
   brain run claude|codex|cursor|kiro [task] Launch an installed agent with private context
-  brain setup [--refresh|--dry-run|--status] Detect project, provision capabilities, manage stored profile
+  brain setup [--refresh|--dry-run|--status|--no-live-skills] Detect project, discover and provision capabilities
   brain update [--check]              Download and install the latest release; --check only reports
   brain mcp                          MCP server over stdio
   brain mcp-config                   Native MCP launch configuration
