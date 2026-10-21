@@ -42,6 +42,7 @@ type ProvisionableCapability struct {
 	MCPServer      *MCPServerDef `json:"mcpServer,omitempty"`    // kind == "mcp"
 	SkillKeyword   string        `json:"skillKeyword,omitempty"` // kind == "skill"
 	CLIBinary      string        `json:"cliBinary,omitempty"`    // kind == "cli"
+	InstallCount   string        `json:"installCount,omitempty"` // e.g. "155.4K" from registry
 }
 
 // ProvisionOutcome classifies the result of a single Provision call.

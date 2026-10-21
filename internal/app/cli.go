@@ -137,6 +137,30 @@ func Run(args []string, version, commit, builtAt string, in io.Reader, out, errO
 			_, e := exec.LookPath(bin)
 			commands[bin] = e == nil
 		}
+		if isTTY() {
+			printHeader("brain doctor")
+			fmt.Println()
+			printKeyValue("Version", styleAccent.Render(version))
+			printKeyValue("Platform", styleMuted.Render(runtime.GOOS+"/"+runtime.GOARCH))
+			printKeyValue("Go", styleMuted.Render(runtime.Version()))
+			printKeyValue("Store", styleMuted.Render(home))
+			fmt.Println()
+			printSectionLabel("Tools")
+			fmt.Println()
+			for _, bin := range []string{"git", "claude", "codex", "cursor-agent", "kiro", "npx"} {
+				ok := commands[bin]
+				fmt.Printf("  %s  %s\n", checkBadge(ok), styleWhite.Render(bin))
+			}
+			fmt.Println()
+			printSectionLabel("Scheduler")
+			fmt.Println()
+			schStatus := schedulerStatus()
+			if active, ok := schStatus["active"].(bool); ok {
+				fmt.Printf("  %s  daily sync\n", checkBadge(active))
+			}
+			fmt.Println()
+			return nil
+		}
 		return printJSON(out, map[string]any{"version": version, "go": runtime.Version(), "platform": runtime.GOOS, "store": home, "commands": commands, "scheduler": schedulerStatus()})
 	}
 	store, err := memory.Open(home)
@@ -450,20 +474,35 @@ func skills(s *memory.Store, args []string, out io.Writer) error {
 		query := strings.Join(args, " ")
 		seeded, seedErr := intelligence.CatalogSeeded(s)
 		if seedErr == nil && seeded {
-			// Search the locally cached AAS catalog — fast, offline, top 10.
 			caps, searchErr := intelligence.SearchSkillsCatalog(s, query, 10)
 			if searchErr != nil {
 				return fmt.Errorf("catalog search: %w", searchErr)
 			}
 			if len(caps) == 0 {
-				_, e := fmt.Fprintf(out, "No skills matched %q in the local catalog.\n", query)
-				return e
+				if isTTY() {
+					fmt.Println(styleMuted.Render("  No skills matched " + query + " in the local catalog."))
+				} else {
+					_, e := fmt.Fprintf(out, "No skills matched %q in the local catalog.\n", query)
+					return e
+				}
+				return nil
 			}
-			fmt.Fprintf(out, "Top %d skills matching %q:\n\n", len(caps), query)
-			for i, c := range caps {
-				fmt.Fprintf(out, "  %2d. %s\n      %s\n\n", i+1, c.Ref, c.Reason)
+			if isTTY() {
+				printHeader("brain skills find · " + query)
+				fmt.Println()
+				for i, c := range caps {
+					e := capEntry{Ref: c.Ref, Kind: c.Kind, Name: c.Name, Network: string(c.Network), Reason: c.Reason, InstallCount: c.InstallCount}
+					fmt.Printf("  %2d. %s\n%s\n\n", i+1, capOptionLabel(e), capDetailLine(c.Reason))
+				}
+				fmt.Println(styleMuted.Render("  Use 'brain skills trust <ref> --keyword <term>' to approve."))
+				fmt.Println()
+			} else {
+				fmt.Fprintf(out, "Top %d skills matching %q:\n\n", len(caps), query)
+				for i, c := range caps {
+					fmt.Fprintf(out, "  %2d. %s\n      %s\n\n", i+1, c.Ref, c.Reason)
+				}
+				fmt.Fprintf(out, "Use 'brain skills trust <ref> --keyword <term>' to approve a skill.\n")
 			}
-			fmt.Fprintf(out, "Use 'brain skills trust <ref> --keyword <term>' to approve a skill.\n")
 			return nil
 		}
 		// Catalog not yet seeded — fall back to npx and cap at 10 results.

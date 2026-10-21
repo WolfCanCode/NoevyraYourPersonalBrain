@@ -13,17 +13,12 @@ import (
 
 	"github.com/WolfCanCode/personal-ai-brain/internal/intelligence"
 	"github.com/WolfCanCode/personal-ai-brain/internal/memory"
+	"github.com/charmbracelet/huh"
+	"github.com/charmbracelet/lipgloss"
 )
 
-// skillGroup holds skills from a single keyword search, displayed as one section.
-type skillGroup struct {
-	label string
-	caps  []intelligence.ProvisionableCapability
-}
+// ── Project root detection ────────────────────────────────────────────────
 
-// projectRoot walks ancestor directories from cwd looking for a .git folder.
-// It checks cwd first, then up to 10 parent directories.
-// Returns cwd unchanged if no .git is found within that bound (Req 1.1, 1.7).
 func projectRoot(cwd string) string {
 	dir := cwd
 	for i := 0; i <= 10; i++ {
@@ -39,10 +34,43 @@ func projectRoot(cwd string) string {
 	return cwd
 }
 
-// displayProfile writes detected languages and signals to out.
-// Stacks are truncated to 5 entries to avoid the wall-of-text problem
-// when package.json has hundreds of dependencies.
+// ── Profile display ───────────────────────────────────────────────────────
+
 func displayProfile(out io.Writer, profile intelligence.ProjectProfile) {
+	if isTTY() {
+		fmt.Println()
+		printSectionLabel("Detected profile")
+		fmt.Println()
+		if len(profile.Languages) > 0 {
+			printKeyValue("Languages", strings.Join(profile.Languages, "  "+styleMuted.Render("·")+"  "))
+		}
+		if len(profile.Stacks) > 0 {
+			shown := profile.Stacks
+			extra := 0
+			if len(shown) > 5 {
+				extra = len(shown) - 5
+				shown = shown[:5]
+			}
+			line := strings.Join(shown, "  "+styleMuted.Render("·")+"  ")
+			if extra > 0 {
+				line += styleMuted.Render(fmt.Sprintf("  +%d more", extra))
+			}
+			printKeyValue("Stacks", line)
+		}
+		if len(profile.Signals) > 0 {
+			signals := make([]string, len(profile.Signals))
+			for i, s := range profile.Signals {
+				signals[i] = lipgloss.NewStyle().Foreground(clrPurple).Render(s)
+			}
+			printKeyValue("Signals", strings.Join(signals, "  "))
+		}
+		if profile.Truncated {
+			fmt.Println(styleMuted.Render("  ⚠  scan truncated at 4 000 files"))
+		}
+		fmt.Println()
+		return
+	}
+	// Non-TTY fallback
 	fmt.Fprintln(out, "Detected profile:")
 	if len(profile.Languages) > 0 {
 		fmt.Fprintln(out, "  Languages:", strings.Join(profile.Languages, ", "))
@@ -68,8 +96,20 @@ func displayProfile(out io.Writer, profile intelligence.ProjectProfile) {
 	}
 }
 
-// promptConfirm reads a y/N answer. Returns true only for "y" or "Y".
+// ── Confirm prompt ────────────────────────────────────────────────────────
+
 func promptConfirm(in io.Reader, out io.Writer, msg string) (bool, error) {
+	if isTTY() {
+		var ok bool
+		err := huh.NewConfirm().
+			Title(msg).
+			Affirmative("Yes, overwrite").
+			Negative("No, keep existing").
+			Value(&ok).
+			Run()
+		return ok, err
+	}
+	// Non-TTY fallback
 	fmt.Fprintf(out, "%s [y/N]: ", msg)
 	scanner := bufio.NewScanner(in)
 	if scanner.Scan() {
@@ -79,12 +119,32 @@ func promptConfirm(in io.Reader, out io.Writer, msg string) (bool, error) {
 	return false, scanner.Err()
 }
 
-// promptSelection prints a numbered capability list grouped by source and
-// reads the user's choice: "all", "none", or comma-separated indices.
-// catalog contains built-in MCP/skill entries; liveGroups contains per-keyword
-// sections returned by searchCatalogSkills.
+// ── skillGroup holds per-keyword results with a display label ─────────────
+
+type skillGroup struct {
+	label string
+	caps  []intelligence.ProvisionableCapability
+}
+
+// ── Interactive multi-select with huh ─────────────────────────────────────
+
+func toCapEntries(caps []intelligence.ProvisionableCapability) []capEntry {
+	out := make([]capEntry, len(caps))
+	for i, c := range caps {
+		out[i] = capEntry{
+			Ref:          c.Ref,
+			Kind:         c.Kind,
+			Name:         c.Name,
+			Network:      string(c.Network),
+			Reason:       c.Reason,
+			InstallCount: c.InstallCount,
+		}
+	}
+	return out
+}
+
 func promptSelection(in io.Reader, out io.Writer, catalog []intelligence.ProvisionableCapability, liveGroups []skillGroup) ([]intelligence.ProvisionableCapability, error) {
-	all := make([]intelligence.ProvisionableCapability, 0, len(catalog)+10)
+	all := make([]intelligence.ProvisionableCapability, 0, len(catalog)+20)
 	all = append(all, catalog...)
 	for _, g := range liveGroups {
 		all = append(all, g.caps...)
@@ -93,6 +153,62 @@ func promptSelection(in io.Reader, out io.Writer, catalog []intelligence.Provisi
 		return nil, nil
 	}
 
+	if isTTY() {
+		return promptSelectionInteractive(catalog, liveGroups, all)
+	}
+	return promptSelectionText(in, out, catalog, liveGroups, all)
+}
+
+func promptSelectionInteractive(catalog []intelligence.ProvisionableCapability, liveGroups []skillGroup, all []intelligence.ProvisionableCapability) ([]intelligence.ProvisionableCapability, error) {
+	// Build huh options with badge labels
+	opts := make([]huh.Option[string], 0, len(all))
+
+	// Section: built-in catalog
+	if len(catalog) > 0 {
+		for _, cap := range catalog {
+			e := capEntry{Ref: cap.Ref, Kind: cap.Kind, Name: cap.Name, Network: string(cap.Network), Reason: cap.Reason}
+			label := capOptionLabel(e)
+			opts = append(opts, huh.NewOption(label, cap.Ref))
+		}
+	}
+	// Sections: per-keyword groups
+	for _, g := range liveGroups {
+		for _, cap := range g.caps {
+			e := capEntry{Ref: cap.Ref, Kind: cap.Kind, Name: cap.Name, Network: string(cap.Network), Reason: cap.Reason, InstallCount: cap.InstallCount}
+			label := capOptionLabel(e)
+			opts = append(opts, huh.NewOption(label, cap.Ref))
+		}
+	}
+
+	var selectedRefs []string
+	form := huh.NewForm(
+		huh.NewGroup(
+			huh.NewMultiSelect[string]().
+				Title(styleAccent.Render("Select capabilities to provision")).
+				Description(styleMuted.Render("↑↓ navigate  ·  Space select  ·  Enter confirm  ·  a toggle all")).
+				Options(opts...).
+				Value(&selectedRefs),
+		),
+	).WithTheme(huh.ThemeDracula())
+
+	if err := form.Run(); err != nil {
+		return nil, err
+	}
+
+	refMap := map[string]intelligence.ProvisionableCapability{}
+	for _, cap := range all {
+		refMap[cap.Ref] = cap
+	}
+	selected := make([]intelligence.ProvisionableCapability, 0, len(selectedRefs))
+	for _, ref := range selectedRefs {
+		if cap, ok := refMap[ref]; ok {
+			selected = append(selected, cap)
+		}
+	}
+	return selected, nil
+}
+
+func promptSelectionText(in io.Reader, out io.Writer, catalog []intelligence.ProvisionableCapability, liveGroups []skillGroup, all []intelligence.ProvisionableCapability) ([]intelligence.ProvisionableCapability, error) {
 	fmt.Fprintln(out, "\nAvailable capabilities:")
 	if len(catalog) > 0 {
 		fmt.Fprintln(out, "\n  Built-in recommendations:")
@@ -107,11 +223,15 @@ func promptSelection(in io.Reader, out io.Writer, catalog []intelligence.Provisi
 		}
 		fmt.Fprintf(out, "\n  %s:\n", g.label)
 		for i, cap := range g.caps {
-			fmt.Fprintf(out, "    %2d. [skill][network] %s\n        %s\n", offset+i+1, cap.Name, cap.Reason)
+			line := fmt.Sprintf("    %2d. [skill][network] %s", offset+i+1, cap.Name)
+			if cap.InstallCount != "" {
+				line += fmt.Sprintf(" · 📦 %s", cap.InstallCount)
+			}
+			fmt.Fprintln(out, line)
+			fmt.Fprintf(out, "        %s\n", cap.Reason)
 		}
 		offset += len(g.caps)
 	}
-
 	fmt.Fprint(out, "\nSelect capabilities to provision (all/none/1,2,3): ")
 	scanner := bufio.NewScanner(in)
 	if !scanner.Scan() {
@@ -137,8 +257,24 @@ func promptSelection(in io.Reader, out io.Writer, catalog []intelligence.Provisi
 	return selected, nil
 }
 
-// printProvisionSummary writes an aligned table of capability name → outcome.
+// ── Provisioning summary ──────────────────────────────────────────────────
+
 func printProvisionSummary(out io.Writer, results []intelligence.ProvisionResult) {
+	if isTTY() {
+		fmt.Println()
+		printSectionLabel("Provisioning summary")
+		fmt.Println()
+		for _, r := range results {
+			badge := outcomeBadge(string(r.Outcome))
+			name := styleWhite.Render(r.Capability.Name)
+			if r.Error != "" {
+				name += styleMuted.Render("  " + r.Error)
+			}
+			fmt.Printf("  %s  %s\n", badge, name)
+		}
+		fmt.Println()
+		return
+	}
 	fmt.Fprintln(out, "\nProvisioning summary:")
 	for _, r := range results {
 		status := string(r.Outcome)
@@ -149,7 +285,8 @@ func printProvisionSummary(out io.Writer, results []intelligence.ProvisionResult
 	}
 }
 
-// buildSessionEvent builds the setup_session event payload.
+// ── Session event builder ─────────────────────────────────────────────────
+
 func buildSessionEvent(results []intelligence.ProvisionResult) map[string]any {
 	names := make([]string, len(results))
 	provisioned, total := 0, len(results)
@@ -168,34 +305,21 @@ func buildSessionEvent(results []intelligence.ProvisionResult) map[string]any {
 	return map[string]any{"capabilities": names, "outcome": outcome}
 }
 
-// ── Live skill search via skills.sh ─────────────────────────────────────────
+// ── Live skill search ─────────────────────────────────────────────────────
 
-// setupKeywords returns up to 3 search keywords for the project, ordered from
-// most specific (framework) to most generic (language, then operational signal).
-// It checks Signals + Languages + Stacks — but only returns terms that appear
-// in keywordPriority, so raw dep names (zone.js, karma, ...) never leak through.
 var keywordPriority = []string{
-	// JS/TS framework signals (injected into Signals by profile.go)
 	"angular", "react", "vue", "svelte", "nextjs",
 	"graphql", "storybook", "tailwind", "redux",
-	// JVM / server-side framework names (appear in Stacks from pom.xml / build.gradle)
 	"spring", "nestjs", "gin", "fiber", "echo",
-	// Python framework names (appear in Stacks from requirements.txt / pyproject.toml)
 	"django", "fastapi", "flask", "pytorch", "tensorflow",
-	// Ruby / PHP / .NET
 	"rails", "laravel", "symfony",
-	// Languages — specific ones first so java beats javascript for JVM projects
 	"java", "kotlin", "scala",
 	"go", "rust", "python", "ruby", "php", "swift",
-	// Generic web languages (last resort for pure JS/TS projects)
 	"typescript", "javascript",
-	// Operational signals
 	"api", "database", "security", "containers",
 }
 
 func setupKeywords(profile intelligence.ProjectProfile) []string {
-	// Build a term set from ALL three profile fields.
-	// keywordPriority acts as an allowlist so raw dep names never leak through.
 	sigSet := map[string]bool{}
 	for _, v := range profile.Signals {
 		sigSet[strings.ToLower(v)] = true
@@ -206,9 +330,6 @@ func setupKeywords(profile intelligence.ProjectProfile) []string {
 	for _, v := range profile.Stacks {
 		sigSet[strings.ToLower(v)] = true
 	}
-	// mutualExclusions: if a more specific language/stack is already chosen,
-	// skip generic alternatives that would produce irrelevant results.
-	// e.g. a Java project with a few .js build scripts should not search "javascript".
 	excludeIfPresent := map[string][]string{
 		"java":       {"javascript", "typescript"},
 		"kotlin":     {"javascript", "typescript"},
@@ -218,8 +339,6 @@ func setupKeywords(profile intelligence.ProjectProfile) []string {
 		"php":        {"javascript", "typescript"},
 		"typescript": {"javascript"},
 	}
-	// Collect ALL matched keywords in priority order — no hard cap.
-	// The caller decides how many to use (catalog uses all; npx fallback limits to 3).
 	result := []string{}
 	excluded := map[string]bool{}
 	for _, kw := range keywordPriority {
@@ -234,67 +353,16 @@ func setupKeywords(profile intelligence.ProjectProfile) []string {
 	return result
 }
 
-// skillRefRe matches owner/repo@skill-name patterns in skills.sh output.
-var skillRefRe = regexp.MustCompile(`[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+@[a-zA-Z0-9_.-]+`)
-
-// ansiEscape matches ANSI terminal color/style sequences (e.g. \x1b[145m).
-// npx skills find colorises its output; these must be stripped before parsing
-// so that color codes like "145m" do not bleed into owner/repo names.
-var ansiEscape = regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]`)
-
-// parseSkillOutput extracts ProvisionableCapabilities from `npx skills find` output.
-func parseSkillOutput(raw, keyword string) []intelligence.ProvisionableCapability {
-	raw = ansiEscape.ReplaceAllString(raw, "") // strip terminal color codes
-	seen := map[string]bool{}
-	caps := []intelligence.ProvisionableCapability{}
-	for _, line := range strings.Split(raw, "\n") {
-		ref := skillRefRe.FindString(line)
-		if ref == "" || seen[ref] {
-			continue
-		}
-		seen[ref] = true
-		// Extract description: the line without the ref itself.
-		desc := strings.TrimSpace(skillRefRe.ReplaceAllString(line, ""))
-		desc = strings.Trim(desc, "-–—:\"'|·•·\t ")
-		if desc == "" {
-			desc = "Community skill for " + keyword
-		}
-		// Use the part after @ as the trust keyword.
-		skillKw := keyword
-		if parts := strings.SplitN(ref, "@", 2); len(parts) == 2 {
-			skillKw = strings.ReplaceAll(parts[1], "-", " ")
-		}
-		caps = append(caps, intelligence.ProvisionableCapability{
-			Kind:           "skill",
-			Ref:            ref,
-			Name:           ref,
-			Reason:         desc,
-			Description:    desc,
-			Confidence:     0.72,
-			Network:        intelligence.NetworkNetwork,
-			TriggerSignals: []string{keyword},
-			SkillKeyword:   skillKw,
-		})
-	}
-	return caps
-}
-
-// searchCatalogSkills queries the locally cached AAS skills catalog per keyword,
-// returning at most 5 skills per keyword as separate labeled groups.
-// If the catalog has not been seeded it falls back to npx skills find
-// (also capped at 5 per keyword) and prints a seed hint.
 func searchCatalogSkills(profile intelligence.ProjectProfile, store *memory.Store, seen map[string]bool, out, errOut io.Writer, skipLive bool) []skillGroup {
 	const perKeyword = 5
 	keywords := setupKeywords(profile)
 	if len(keywords) == 0 {
 		return nil
 	}
-
 	seeded, err := intelligence.CatalogSeeded(store)
 	if err != nil {
 		fmt.Fprintf(errOut, "brain: catalog check failed: %v\n", err)
 	}
-
 	if seeded {
 		groups := []skillGroup{}
 		for _, kw := range keywords {
@@ -321,24 +389,33 @@ func searchCatalogSkills(profile intelligence.ProjectProfile, store *memory.Stor
 		}
 		return groups
 	}
-
-	// Catalog not seeded — hint and optional npx fallback
-	fmt.Fprintln(out, "  AAS skill catalog not found locally.")
-	fmt.Fprintln(out, "  Run 'brain sources seed && brain sources sync' to index 2 700+ skills for offline search.")
+	// Catalog not seeded
+	if isTTY() {
+		fmt.Println(styleMuted.Render("  ⚠  AAS skill catalog not found."))
+		fmt.Println(styleMuted.Render("     Run 'brain sources seed && brain sources sync' to index 2 700+ skills."))
+	} else {
+		fmt.Fprintln(out, "  AAS skill catalog not found locally.")
+		fmt.Fprintln(out, "  Run 'brain sources seed && brain sources sync' to index 2 700+ skills for offline search.")
+	}
 	if skipLive {
 		return nil
 	}
 	if _, lookErr := exec.LookPath("npx"); lookErr != nil {
 		return nil
 	}
-	// Limit npx to 3 keywords — each is a separate network call
 	npxKeywords := keywords
 	if len(npxKeywords) > 3 {
 		npxKeywords = npxKeywords[:3]
 	}
 	groups := []skillGroup{}
 	for _, kw := range npxKeywords {
-		fmt.Fprintf(out, "  Searching skills.sh for %q (npx fallback)…\n", kw)
+		if isTTY() {
+			fmt.Printf("  %s Searching skills.sh for %s…\n",
+				styleMuted.Render("→"),
+				styleAccent.Render(kw))
+		} else {
+			fmt.Fprintf(out, "  Searching skills.sh for %q (npx fallback)…\n", kw)
+		}
 		raw, npxErr := external("npx", []string{"--yes", "skills", "find", kw})
 		if npxErr != nil {
 			fmt.Fprintf(errOut, "brain: npx skills find %q: %v\n", kw, npxErr)
@@ -367,10 +444,64 @@ func searchCatalogSkills(profile intelligence.ProjectProfile, store *memory.Stor
 	return groups
 }
 
-// ── Main setup handler ───────────────────────────────────────────────────────
+// ── npx output parser ─────────────────────────────────────────────────────
 
-// runSetup is the handler for "brain setup".
-// Flags: --refresh, --dry-run, --status, --no-live-skills
+var (
+	skillRefRe     = regexp.MustCompile(`[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+@[a-zA-Z0-9_.-]+`)
+	ansiEscape     = regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]`)
+	installCountRe = regexp.MustCompile(`([0-9]+(?:\.[0-9]+)?[KMB]?)\s+installs?`)
+)
+
+func parseSkillOutput(raw, keyword string) []intelligence.ProvisionableCapability {
+	raw = ansiEscape.ReplaceAllString(raw, "")
+	lines := strings.Split(raw, "\n")
+	seen := map[string]bool{}
+	caps := []intelligence.ProvisionableCapability{}
+
+	for i, line := range lines {
+		ref := skillRefRe.FindString(line)
+		if ref == "" || seen[ref] {
+			continue
+		}
+		seen[ref] = true
+
+		desc := strings.TrimSpace(skillRefRe.ReplaceAllString(line, ""))
+		desc = strings.Trim(desc, "-–—:\"'|·•·\t ")
+
+		// Capture install count from the next 1-2 lines
+		installCount := ""
+		for j := i + 1; j <= i+2 && j < len(lines); j++ {
+			if m := installCountRe.FindStringSubmatch(lines[j]); len(m) >= 2 {
+				installCount = m[1]
+				break
+			}
+		}
+
+		if desc == "" {
+			desc = "Community skill for " + keyword
+		}
+		skillKw := keyword
+		if parts := strings.SplitN(ref, "@", 2); len(parts) == 2 {
+			skillKw = strings.ReplaceAll(parts[1], "-", " ")
+		}
+		caps = append(caps, intelligence.ProvisionableCapability{
+			Kind:           "skill",
+			Ref:            ref,
+			Name:           ref,
+			Reason:         desc,
+			Description:    desc,
+			Confidence:     0.72,
+			Network:        intelligence.NetworkNetwork,
+			TriggerSignals: []string{keyword},
+			SkillKeyword:   skillKw,
+			InstallCount:   installCount,
+		})
+	}
+	return caps
+}
+
+// ── runSetup orchestration ────────────────────────────────────────────────
+
 func runSetup(store *memory.Store, project memory.Project, args []string, in io.Reader, out, errOut io.Writer, home string) error {
 	pos, f, err := flags(args, nil, []string{"--refresh", "--dry-run", "--status", "--no-live-skills"})
 	if err != nil {
@@ -382,38 +513,60 @@ func runSetup(store *memory.Store, project memory.Project, args []string, in io.
 	dryRun := f["--dry-run"] != ""
 	skipLive := f["--no-live-skills"] != ""
 
-	// --status path
+	if isTTY() {
+		printHeader("brain setup")
+	}
+
+	// ── --status path ────────────────────────────────────────────────────
 	if f["--status"] != "" {
 		stored, err := store.LatestProfile(project.ID)
 		if err != nil {
 			return err
 		}
 		if stored == nil {
-			fmt.Fprintln(out, "No profile found for the current project. Run 'brain setup' to create one.")
+			if isTTY() {
+				fmt.Println(styleWarn.Render("  No profile found for this project."))
+				fmt.Println(styleMuted.Render("  Run 'brain setup' to create one."))
+			} else {
+				fmt.Fprintln(out, "No profile found for the current project. Run 'brain setup' to create one.")
+			}
 			return nil
 		}
-		fmt.Fprintln(out, "Stored profile for project:", stored.ProjectID)
-		fmt.Fprintln(out, "Root:      ", stored.Root)
-		fmt.Fprintln(out, "Created:   ", stored.CreatedAt)
-		var profile intelligence.ProjectProfile
-		if json.Unmarshal([]byte(stored.ProfileJSON), &profile) == nil {
-			displayProfile(out, profile)
-		}
-		if stored.CapabilitiesJSON != "" && stored.CapabilitiesJSON != "[]" {
-			var caps []intelligence.ProvisionResult
-			if json.Unmarshal([]byte(stored.CapabilitiesJSON), &caps) == nil && len(caps) > 0 {
-				fmt.Fprintln(out, "  Provisioned capabilities:")
-				for _, c := range caps {
-					if c.Outcome == intelligence.OutcomeProvisioned {
-						fmt.Fprintln(out, "    -", c.Capability.Name)
+		if isTTY() {
+			printSectionLabel("Stored profile")
+			fmt.Println()
+			printKeyValue("Project", styleAccent.Render(stored.ProjectID))
+			printKeyValue("Root", styleMuted.Render(stored.Root))
+			printKeyValue("Created", styleMuted.Render(stored.CreatedAt))
+			var profile intelligence.ProjectProfile
+			if json.Unmarshal([]byte(stored.ProfileJSON), &profile) == nil {
+				displayProfile(os.Stdout, profile)
+			}
+			if stored.CapabilitiesJSON != "" && stored.CapabilitiesJSON != "[]" {
+				var caps []intelligence.ProvisionResult
+				if json.Unmarshal([]byte(stored.CapabilitiesJSON), &caps) == nil {
+					printSectionLabel("Provisioned capabilities")
+					fmt.Println()
+					for _, c := range caps {
+						if c.Outcome == intelligence.OutcomeProvisioned {
+							fmt.Printf("  %s  %s\n", kindBadge(c.Capability.Kind), styleWhite.Render(c.Capability.Name))
+						}
 					}
 				}
+			}
+		} else {
+			fmt.Fprintln(out, "Stored profile for project:", stored.ProjectID)
+			fmt.Fprintln(out, "Root:      ", stored.Root)
+			fmt.Fprintln(out, "Created:   ", stored.CreatedAt)
+			var profile intelligence.ProjectProfile
+			if json.Unmarshal([]byte(stored.ProfileJSON), &profile) == nil {
+				displayProfile(out, profile)
 			}
 		}
 		return nil
 	}
 
-	// Detection phase
+	// ── Detection phase ──────────────────────────────────────────────────
 	root := projectRoot(project.Root)
 	profile, err := intelligence.Profile(root)
 	if err != nil {
@@ -421,40 +574,53 @@ func runSetup(store *memory.Store, project memory.Project, args []string, in io.
 	}
 	displayProfile(out, profile)
 
-	// Overwrite check
+	// ── Overwrite check ──────────────────────────────────────────────────
 	if f["--refresh"] == "" {
 		stored, err := store.LatestProfile(project.ID)
 		if err != nil {
 			return err
 		}
 		if stored != nil {
-			fmt.Fprintf(out, "\nExisting profile (created %s): root=%s\n", stored.CreatedAt, stored.Root)
+			if isTTY() {
+				fmt.Printf("  %s  %s\n", styleMuted.Render("Existing profile:"), styleMuted.Render("created "+stored.CreatedAt))
+			} else {
+				fmt.Fprintf(out, "\nExisting profile (created %s): root=%s\n", stored.CreatedAt, stored.Root)
+			}
 			ok, err := promptConfirm(in, out, "Overwrite existing profile?")
 			if err != nil {
 				return err
 			}
 			if !ok {
-				fmt.Fprintln(out, "Setup cancelled.")
+				if isTTY() {
+					fmt.Println(styleMuted.Render("  Setup cancelled."))
+				} else {
+					fmt.Fprintln(out, "Setup cancelled.")
+				}
 				return nil
 			}
 		}
 	}
 
-	// Built-in capability discovery
+	// ── Capability discovery ──────────────────────────────────────────────
 	trusted, err := store.Skills()
 	if err != nil {
 		return err
 	}
 	catalogCaps := intelligence.DiscoverCapabilities(profile, trusted)
 
-	// Live skill search via skills.sh
 	seen := map[string]bool{}
 	for _, c := range catalogCaps {
 		seen[c.Kind+":"+c.Ref] = true
 	}
+
 	var liveGroups []skillGroup
 	if len(setupKeywords(profile)) > 0 {
-		fmt.Fprintln(out, "\nSearching AAS skill catalog…")
+		if isTTY() {
+			printSectionLabel("Searching AAS skill catalog…")
+			fmt.Println()
+		} else {
+			fmt.Fprintln(out, "\nSearching AAS skill catalog…")
+		}
 		liveGroups = searchCatalogSkills(profile, store, seen, out, errOut, skipLive)
 	}
 
@@ -463,30 +629,57 @@ func runSetup(store *memory.Store, project memory.Project, args []string, in io.
 		totalLive += len(g.caps)
 	}
 	if len(catalogCaps) == 0 && totalLive == 0 {
-		fmt.Fprintln(out, "\nNo capabilities matched the detected project profile.")
+		if isTTY() {
+			fmt.Println(styleMuted.Render("  No capabilities matched the detected project profile."))
+		} else {
+			fmt.Fprintln(out, "\nNo capabilities matched the detected project profile.")
+		}
 	}
 
+	// ── Dry run ───────────────────────────────────────────────────────────
 	if dryRun {
-		fmt.Fprintln(out, "\n[dry-run] built-in capabilities:")
-		for i, cap := range catalogCaps {
-			fmt.Fprintf(out, "  %2d. [%s][%s] %s\n", i+1, cap.Kind, string(cap.Network), cap.Name)
-		}
-		offset := len(catalogCaps)
-		for _, g := range liveGroups {
-			if len(g.caps) == 0 {
-				continue
+		if isTTY() {
+			printSectionLabel("[dry-run] built-in capabilities")
+			fmt.Println()
+			for _, cap := range catalogCaps {
+				e := capEntry{Ref: cap.Ref, Kind: cap.Kind, Name: cap.Name, Network: string(cap.Network), Reason: cap.Reason}
+				fmt.Println(" ", capOptionLabel(e))
 			}
-			fmt.Fprintf(out, "\n[dry-run] %s:\n", g.label)
-			for i, cap := range g.caps {
-				fmt.Fprintf(out, "  %2d. [skill][network] %s\n", offset+i+1, cap.Name)
+			offset := len(catalogCaps)
+			for _, g := range liveGroups {
+				if len(g.caps) == 0 {
+					continue
+				}
+				fmt.Println(styleSection.Render("  [dry-run] " + g.label))
+				for i, cap := range g.caps {
+					e := capEntry{Ref: cap.Ref, Kind: cap.Kind, Name: cap.Name, Network: string(cap.Network), Reason: cap.Reason, InstallCount: cap.InstallCount}
+					fmt.Printf("  %2d. %s\n", offset+i+1, capOptionLabel(e))
+				}
+				offset += len(g.caps)
 			}
-			offset += len(g.caps)
+			fmt.Println(styleMuted.Render("\n  [dry-run] no files or records written."))
+		} else {
+			fmt.Fprintln(out, "\n[dry-run] built-in capabilities:")
+			for i, cap := range catalogCaps {
+				fmt.Fprintf(out, "  %2d. [%s][%s] %s\n", i+1, cap.Kind, string(cap.Network), cap.Name)
+			}
+			offset := len(catalogCaps)
+			for _, g := range liveGroups {
+				if len(g.caps) == 0 {
+					continue
+				}
+				fmt.Fprintf(out, "\n[dry-run] %s:\n", g.label)
+				for i, cap := range g.caps {
+					fmt.Fprintf(out, "  %2d. [skill][network] %s\n", offset+i+1, cap.Name)
+				}
+				offset += len(g.caps)
+			}
+			fmt.Fprintln(out, "\n[dry-run] no files or database records were written.")
 		}
-		fmt.Fprintln(out, "\n[dry-run] no files or database records were written.")
 		return nil
 	}
 
-	// Selection
+	// ── Selection & provisioning ──────────────────────────────────────────
 	agentPaths, err := intelligence.DefaultAgentConfigPaths()
 	if err != nil {
 		return err
@@ -496,9 +689,13 @@ func runSetup(store *memory.Store, project memory.Project, args []string, in io.
 		return err
 	}
 
-	// Provisioning
 	results := []intelligence.ProvisionResult{}
 	for _, cap := range selected {
+		if isTTY() {
+			fmt.Printf("  %s Provisioning %s…\n",
+				styleMuted.Render("→"),
+				styleAccent.Render(cap.Name))
+		}
 		result := intelligence.Provision(cap, agentPaths, store, false, in, out)
 		results = append(results, result)
 		if result.Outcome == intelligence.OutcomeFailed && result.Error != "" {
@@ -510,7 +707,6 @@ func runSetup(store *memory.Store, project memory.Project, args []string, in io.
 		}
 	}
 
-	// Persist profile
 	profileJSON, err := json.Marshal(profile)
 	if err != nil {
 		return err
@@ -522,12 +718,17 @@ func runSetup(store *memory.Store, project memory.Project, args []string, in io.
 	if _, err = store.UpsertProfile(project.ID, root, string(profileJSON), string(capsJSON)); err != nil {
 		return fmt.Errorf("failed to persist project profile: %w", err)
 	}
-
 	if _, logErr := store.Log("setup_session", project.ID, buildSessionEvent(results)); logErr != nil {
 		fmt.Fprintln(errOut, "brain: setup session log failed:", logErr)
 	}
 
 	printProvisionSummary(out, results)
-	fmt.Fprintln(out, "\nSetup complete. Run 'brain setup --status' to inspect the stored profile.")
+
+	if isTTY() {
+		fmt.Println(styleSuccess.Render("  ✦ Setup complete.") + styleMuted.Render("  Run 'brain setup --status' to inspect."))
+		fmt.Println()
+	} else {
+		fmt.Fprintln(out, "\nSetup complete. Run 'brain setup --status' to inspect the stored profile.")
+	}
 	return nil
 }
