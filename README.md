@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/full-logo.png" alt="Noevyra — Intelligence That Evolves" width="500">
+  <img src="site/assets/full-logo.png" alt="Noevyra — Intelligence That Evolves" width="500">
 </p>
 
 <p align="center">

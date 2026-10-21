@@ -2,429 +2,433 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#101014">
-<meta name="description" content="One brain. Any agent. Zero re-setup. brain setup once — 2,737 skills bundled, interactive TUI, Claude/Codex/Cursor/Kiro.">
+<meta name="theme-color" content="#0A0A0F">
+<meta name="description" content="brain setup once — 2,737 skills bundled, stack detected, MCPs provisioned. Switch between Claude, Codex, Cursor and Kiro without rebuilding anything.">
 <meta property="og:title" content="Noevyra — One brain. Any agent.">
-<meta property="og:description" content="brain setup once. Your stack is detected, skills are matched, MCPs are configured. Switch agents without re-explaining anything.">
+<meta property="og:description" content="brain setup once. Switch between Claude, Codex, Cursor and Kiro without rebuilding context.">
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://raw.githubusercontent.com/WolfCanCode/personal-ai-brain/main/site/assets/full-logo.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://raw.githubusercontent.com/WolfCanCode/personal-ai-brain/main/site/assets/full-logo.png">
-<link rel="icon" href="assets/noevyra-icon.png" type="image/png">
+<link rel="icon" href="assets/icon-logo.png" type="image/png">
 <title>Noevyra — One brain. Any agent.</title>
 <style>
-:root{color-scheme:dark;--bg:#101014;--panel:#19191f;--line:#303039;--muted:#aaaab8;--text:#f4f2ee;--accent:#D4A843;--green:#b4e8bf;--blue:#7dd3fc;--orange:#fb923c;--yellow:#fcd34d;--red:#ff6b6b}
-*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:32px}
-body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 system-ui,-apple-system,sans-serif}
-a{color:inherit;text-decoration:none}button{font:inherit;cursor:pointer}
-a:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
-main,nav,footer{max-width:1100px;margin:auto;padding-inline:32px}
-/* nav */
-nav{height:92px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}
-.brand{font-weight:800;letter-spacing:-.5px;display:flex;gap:10px;align-items:center;font-size:15px}
-.mark{overflow:hidden;border-radius:8px;width:34px;height:34px;background:#fff;flex-shrink:0;border:1px solid rgba(212,168,67,.3)}
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0A0A0F;--surface:#111118;--card:#14141C;
+  --border:rgba(255,255,255,.07);--border-gold:rgba(212,168,67,.22);
+  --text:#ECEAEA;--muted:#68687A;--subtle:#909098;
+  --gold:#D4A843;--gold-dim:#8A6A28;--navy:#7B9FCB;
+  --green:#5EC66E;--red:#E07070;--amber:#E8A545
+}
+body{background:var(--bg);color:var(--text);font:15px/1.65 system-ui,-apple-system,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+button{font:inherit;cursor:pointer}
+/* ── Layout ── */
+.wrap{max-width:1100px;margin:0 auto;padding-inline:32px}
+/* ── Nav ── */
+nav{border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;backdrop-filter:blur(16px);background:rgba(10,10,15,.85)}
+.nav-inner{max-width:1100px;margin:0 auto;padding:0 32px;height:62px;display:flex;align-items:center;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:10px;font:700 14px/1 system-ui;letter-spacing:-.2px}
+.mark{width:30px;height:30px;border-radius:7px;background:#fff;overflow:hidden;flex-shrink:0;border:1px solid var(--border-gold)}
 .mark img{width:100%;height:100%;object-fit:cover}
-.nav-links{display:flex;align-items:center;gap:24px;font-size:13px;color:var(--muted)}
-.nav-links a:hover{color:var(--text)}
-.btn{display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:8px;padding:10px 18px;color:var(--text);background:transparent;font-size:13px;font-weight:700;gap:10px;transition:border-color .15s,filter .15s}
-.btn.primary{background:#D4A843;color:#1A1000;border-color:#D4A843;font-weight:800}
-.btn:hover{filter:brightness(1.1);border-color:var(--accent)}
-/* hero */
-.hero{padding:80px 0 60px;display:grid;grid-template-columns:1.15fr 0.85fr;gap:64px;align-items:center}
-.tag{font:11px/1 ui-monospace,monospace;letter-spacing:1.2px;text-transform:uppercase;color:var(--accent)}
-.pill{border:1px solid #514763;border-radius:100px;padding:6px 12px;display:inline-flex;align-items:center;gap:8px}
-.dot{width:6px;height:6px;border-radius:50%;background:var(--green)}
-h1{font-size:clamp(44px,6vw,72px);line-height:1.06;letter-spacing:-3.5px;font-weight:700;margin:22px 0}
-h1 span{color:var(--accent)}
-.lead{color:var(--muted);font-size:18px;line-height:1.8;max-width:560px;margin-inline:auto}
-.actions{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin:28px 0 16px}
-.fine{font-size:11px;color:var(--muted);font-family:ui-monospace,monospace;text-align:center}
-/* brand visual */
-.hero-stats-row{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:52px;position:relative;z-index:1}
-.stat{background:rgba(25,25,31,.8);border:1px solid var(--line);border-radius:10px;padding:14px 22px;text-align:center;min-width:120px;backdrop-filter:blur(4px)}
-.stat-value{font:700 22px/1 system-ui;color:var(--text);letter-spacing:-.5px}
-.stat-value.accent{color:#D4A843}
-.stat-label{font:11px/1 ui-monospace,monospace;color:var(--muted);margin-top:5px;display:block}
-.hero-snippet{display:inline-block;margin:18px auto 0;background:rgba(15,15,20,.9);border:1px solid rgba(212,168,67,.2);border-radius:10px;padding:14px 24px;font:13px/1.9 ui-monospace,monospace;text-align:left;backdrop-filter:blur(8px)}
-/* strip */
-.strip{display:flex;justify-content:space-between;gap:16px;padding:20px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);font:11px ui-monospace,monospace;color:var(--muted)}
-.strip b{color:var(--text)}
-/* sections */
-section{padding:72px 0;border-bottom:1px solid var(--line)}
-h2{font-size:34px;line-height:1.15;letter-spacing:-1.2px;font-weight:700;margin:10px 0 0}
-.section-top{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:28px}
-.section-top p{color:var(--muted);font-size:13px;max-width:300px;margin:0}
-/* cards grid */
-.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
-.card{border:1px solid var(--line);border-radius:10px;padding:24px;background:linear-gradient(140deg,#1c1b23,#16161b)}
-.number{font:11px ui-monospace,monospace;color:var(--accent);margin-bottom:4px}
-h3{font-size:17px;letter-spacing:-.3px;font-weight:700;margin:20px 0 8px}
-.card p{font-size:13px;color:var(--muted);margin:0;line-height:1.7}
-/* terminal */
-.terminal{border:1px solid #44404e;border-radius:12px;background:#0f0f14;overflow:hidden;box-shadow:0 20px 70px #0007}
-.termbar{padding:13px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;font:11px ui-monospace,monospace;color:var(--muted)}
-.lights{display:flex;gap:5px}
-.lights i{width:7px;height:7px;background:#50505e;border-radius:50%}
-.lights i:first-child{background:var(--accent)}
-.terminal-body{padding:22px 24px;font:12.5px/2 ui-monospace,monospace}
-.p{color:var(--accent)}
-.ok{color:var(--green)}
-.hi{color:var(--accent);font-weight:700}
-.mu{color:var(--muted)}
-.bl{color:var(--blue)}
-.ye{color:var(--yellow)}
-.or{color:var(--orange)}
-.wh{color:var(--text)}
-/* demo */
-.demo{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--panel)}
-.demo-head{padding:18px 22px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);gap:16px}
-.tabs{display:flex;gap:6px;flex-wrap:wrap}
-.tabs button{border:1px solid transparent;background:transparent;color:var(--muted);border-radius:6px;padding:7px 13px;font:12px ui-monospace,monospace}
-.tabs button[aria-pressed=true]{background:#342d43;color:var(--accent);border-color:#514563}
-.demo-grid{display:grid;grid-template-columns:1fr 1fr}
-.demo-pane{padding:28px}
-.demo-pane+div{border-left:1px solid var(--line)}
-.demo-label{font:10px ui-monospace,monospace;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
-.demo pre{white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.9 ui-monospace,monospace;color:var(--accent);margin:18px 0}
-.context-row{padding:10px 0;border-bottom:1px solid var(--line);font-size:12px;display:flex;gap:12px}
-.context-row:last-child{border:0}
-.context-row span{font:10px ui-monospace,monospace;padding-top:3px;color:var(--green);flex-shrink:0}
-.demo-note{padding:13px 22px;background:#141419;border-top:1px solid var(--line);font-size:11px;color:var(--muted)}
-/* roadmap */
-.roadmap{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.list{list-style:none;padding:0;margin:16px 0 0}
-.list li{font-size:13px;padding:10px 0;border-top:1px solid var(--line);color:var(--muted);display:flex;gap:10px;align-items:baseline}
-.list li span{flex-shrink:0;width:16px;text-align:center}
-.list.done li{color:#d4d0e8}
-.list.next li span{color:var(--accent)}
-/* get started */
-.get-started{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:start}
-.get-started>div>p{color:var(--muted);font-size:14px}
-.commands{background:#141419;border:1px solid var(--line);border-radius:10px;padding:22px}
-.commands-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
-.commands pre{font:12px/2 ui-monospace,monospace;white-space:pre-wrap;margin:0}
-.copy{font:11px ui-monospace,monospace;color:var(--accent);background:transparent;border:1px solid #484052;padding:5px 10px;border-radius:5px}
-.author{margin-top:24px;display:flex;align-items:center;gap:10px;font-size:12px}
-.avatar{width:36px;height:36px;border-radius:50%;background:#272330;display:grid;place-items:center;color:var(--accent);font-weight:700;flex-shrink:0}
-.author small{display:block;color:var(--muted)}
-/* badge demo */
-.badge-row{display:flex;align-items:center;gap:8px;padding:10px 0;border-top:1px solid var(--line);font-size:12px;font-family:ui-monospace,monospace}
-.badge{display:inline-block;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:700}
-.b-mcp{background:#2d1f4e;color:var(--accent)}
-.b-skill{background:#1a2a40;color:var(--blue)}
-.b-cli{background:#2a2010;color:var(--yellow)}
-.b-net{color:var(--orange)}
-.b-local{color:var(--green)}
-.b-pkg{color:var(--yellow)}
-footer{display:flex;justify-content:space-between;gap:16px;padding-block:26px;color:var(--muted);font-size:11px}
-.skip{position:absolute;top:-100px}.skip:focus{top:10px;left:10px;background:var(--bg);padding:10px;z-index:9}
-@media(max-width:800px){.cards{grid-template-columns:1fr 1fr}.hero{gap:24px}.strip{flex-wrap:wrap}.get-started{gap:28px}.nav-links{gap:14px}.roadmap{grid-template-columns:1fr}}
-@media(max-width:620px){main,nav,footer{padding-inline:18px}nav{height:72px}.nav-links>a:not(:last-child){display:none}.hero{padding:60px 0 48px}h1{font-size:52px;letter-spacing:-2.5px}.section-top{display:block}.section-top p{margin-top:14px;max-width:none}.cards,.roadmap,.demo-grid,.get-started{grid-template-columns:1fr}.demo-pane+div{border-left:0;border-top:1px solid var(--line)}.demo-head{flex-direction:column;align-items:flex-start;gap:10px}section{padding:50px 0}h2{font-size:28px}footer{flex-wrap:wrap}}
-@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+.nav-links{display:flex;gap:28px;font-size:13px;color:var(--muted)}
+.nav-links a:hover{color:var(--text);transition:color .15s}
+.nav-r{display:flex;align-items:center;gap:12px}
+.nav-cta{background:var(--gold);color:#150F00;border:none;border-radius:7px;padding:8px 16px;font:700 13px system-ui;letter-spacing:-.1px}
+.nav-cta:hover{filter:brightness(1.08)}
+/* ── Hero ── */
+.hero{padding:80px 0 64px}
+.hero-grid{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:start}
+.eyebrow{display:flex;align-items:center;gap:8px;margin-bottom:22px}
+.eyebrow-dot{width:6px;height:6px;border-radius:50%;background:var(--green)}
+.eyebrow-txt{font:11px/1 ui-monospace,monospace;letter-spacing:1.1px;text-transform:uppercase;color:var(--gold)}
+h1{font-size:clamp(38px,4.2vw,54px);font-weight:800;line-height:1.07;letter-spacing:-2.5px;margin-bottom:18px}
+h1 .ac{color:var(--gold)}
+.hero-lead{font-size:15px;line-height:1.75;color:var(--subtle);max-width:400px;margin-bottom:30px}
+.hero-lead strong{color:var(--text);font-weight:600}
+.hero-btns{display:flex;gap:10px;margin-bottom:18px}
+.btn-gold{background:var(--gold);color:#150F00;border:none;border-radius:8px;padding:11px 20px;font:700 13px system-ui}
+.btn-gold:hover{filter:brightness(1.08)}
+.btn-outline{background:transparent;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:11px 20px;font:600 13px system-ui}
+.btn-outline:hover{border-color:var(--border-gold)}
+.hero-meta{font:11px ui-monospace,monospace;color:var(--muted)}
+/* ── Terminal ── */
+.term{background:#0C0C13;border:1px solid rgba(255,255,255,.08);border-radius:12px;overflow:hidden;box-shadow:0 0 60px rgba(212,168,67,.05),0 24px 64px rgba(0,0,0,.5)}
+.tbar{padding:11px 15px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:7px}
+.tc{width:9px;height:9px;border-radius:50%}
+.ttitle{flex:1;text-align:center;font:11px ui-monospace,monospace;color:var(--muted)}
+.tbody{padding:20px 22px;font:12px/1.95 ui-monospace,monospace}
+.t-gp{color:var(--gold)}.t-ok{color:var(--green)}.t-mu{color:var(--muted)}.t-wh{color:var(--text)}.t-nb{color:var(--navy)}.t-am{color:var(--amber)}
+.tbm{display:inline-block;background:rgba(212,168,67,.11);color:var(--gold);border-radius:3px;padding:0 5px;font-size:11px;font-weight:700;letter-spacing:.2px}
+.tbs{display:inline-block;background:rgba(123,159,203,.11);color:var(--navy);border-radius:3px;padding:0 5px;font-size:11px;font-weight:700;letter-spacing:.2px}
+/* ── Stats ── */
+.stats-strip{border-top:1px solid var(--border);border-bottom:1px solid var(--border);display:grid;grid-template-columns:repeat(4,1fr)}
+.stat{padding:22px 0;text-align:center;border-right:1px solid var(--border)}
+.stat:last-child{border-right:0}
+.stat-v{font:800 24px/1 system-ui;letter-spacing:-.5px}
+.stat-v.g{color:var(--gold)}
+.stat-l{font:11px ui-monospace,monospace;color:var(--muted);margin-top:5px}
+/* ── Section shared ── */
+section{padding:80px 0;border-bottom:1px solid var(--border)}
+.section-tag{font:11px ui-monospace,monospace;letter-spacing:1px;text-transform:uppercase;color:var(--gold-dim);margin-bottom:14px}
+h2{font-size:clamp(26px,3vw,36px);font-weight:800;line-height:1.12;letter-spacing:-1.5px}
+h2 span{color:var(--gold)}
+/* ── Why ── */
+.why-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:32px}
+.why-card{border:1px solid var(--border);border-radius:10px;padding:26px;background:linear-gradient(140deg,var(--card),#0F0F16)}
+.why-label{font:11px ui-monospace,monospace;color:var(--gold-dim);margin-bottom:16px;letter-spacing:.5px}
+.why-card h3{font-size:16px;font-weight:700;margin-bottom:14px;letter-spacing:-.2px}
+.why-list{list-style:none;display:flex;flex-direction:column;gap:0}
+.why-list li{font-size:13px;padding:10px 0;border-top:1px solid var(--border);color:var(--subtle);display:flex;gap:10px;align-items:baseline}
+.why-list li span{flex-shrink:0;font-size:12px}
+.why-list.bad li{color:var(--muted)}
+/* ── How ── */
+.how-grid{display:grid;grid-template-columns:.9fr 1.1fr;gap:60px;align-items:start;margin-top:40px}
+.how-desc{font-size:14px;line-height:1.75;color:var(--subtle);margin-top:16px}
+.steps{display:flex;flex-direction:column}
+.step{display:flex;gap:18px;padding:18px 0;border-top:1px solid var(--border)}
+.step-n{width:26px;height:26px;border-radius:50%;border:1px solid var(--border-gold);display:grid;place-items:center;font:700 11px ui-monospace,monospace;color:var(--gold);flex-shrink:0;margin-top:2px}
+.step h4{font-size:14px;font-weight:700;margin-bottom:4px;letter-spacing:-.1px}
+.step p{font-size:13px;color:var(--subtle);line-height:1.6}
+/* ── Agents ── */
+.agents-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px}
+.agent-tab{border:1px solid var(--border);background:transparent;color:var(--muted);border-radius:7px;padding:8px 16px;font:12px ui-monospace,monospace;transition:all .15s}
+.agent-tab[aria-pressed=true]{background:rgba(212,168,67,.1);color:var(--gold);border-color:var(--border-gold)}
+.agents-demo{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:24px}
+.agents-demo-l{padding:0}
+.demo-label-sm{font:10px ui-monospace,monospace;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px}
+.demo-cmd{font:13px/1 ui-monospace,monospace;color:var(--gold);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:12px}
+.copy-btn{font:11px ui-monospace,monospace;color:var(--gold-dim);background:transparent;border:1px solid var(--border);border-radius:5px;padding:5px 10px}
+.pack-rows{display:flex;flex-direction:column}
+.pack-row{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px}
+.pack-row:last-child{border:0}
+.pack-tag{font:10px ui-monospace,monospace;color:var(--green);padding-top:3px;flex-shrink:0}
+.demo-note{margin-top:16px;font-size:11px;color:var(--muted);line-height:1.6}
+/* ── Features ── */
+.feats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:32px}
+.feat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:24px}
+.feat-n{font:11px ui-monospace,monospace;color:var(--gold);margin-bottom:16px}
+.feat h3{font-size:15px;font-weight:700;margin-bottom:8px;letter-spacing:-.2px}
+.feat p{font-size:13px;color:var(--subtle);line-height:1.65}
+/* ── Roadmap ── */
+.roadmap-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:32px}
+.road-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:26px}
+.road-card h3{font-size:15px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.road-list{list-style:none;display:flex;flex-direction:column;gap:0}
+.road-list li{font-size:13px;padding:10px 0;border-top:1px solid var(--border);color:var(--subtle);display:flex;gap:10px;align-items:baseline}
+.road-list li span{flex-shrink:0}
+/* ── CTA ── */
+.cta-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:32px}
+.cta-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:30px}
+.cta-card h3{font-size:18px;font-weight:700;letter-spacing:-.3px;margin-bottom:10px}
+.cta-card p{font-size:13px;color:var(--subtle);line-height:1.65;margin-bottom:20px}
+.snippet{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:16px 18px;font:12px/2 ui-monospace,monospace}
+.author-row{margin-top:40px;display:flex;align-items:center;gap:12px;font-size:13px}
+.avatar{width:38px;height:38px;border-radius:50%;background:var(--card);border:1px solid var(--border);display:grid;place-items:center;font:700 14px system-ui;color:var(--gold);flex-shrink:0}
+.author-row small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+/* ── Footer ── */
+footer{padding:28px 0;display:flex;justify-content:space-between;align-items:center;gap:16px;font-size:11px;color:var(--muted);border-top:1px solid var(--border)}
+.footer-links{display:flex;gap:20px}
+.footer-links a:hover{color:var(--text)}
+/* ── Responsive ── */
+@media(max-width:860px){.hero-grid,.how-grid,.agents-demo,.cta-grid,.roadmap-grid{grid-template-columns:1fr}.why-grid,.feats-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:580px){.wrap,.nav-inner{padding-inline:20px}.nav-links{display:none}h1{font-size:38px;letter-spacing:-2px}.stats-strip{grid-template-columns:1fr 1fr}.stat{border-bottom:1px solid var(--border)}.why-grid,.feats-grid,.roadmap-grid{grid-template-columns:1fr}section{padding:56px 0}.hero{padding:56px 0 48px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
 <body>
-<a class="skip" href="#main">Skip to content</a>
 
 <nav aria-label="Main navigation">
-  <a class="brand" href="#"><span class="mark" aria-hidden="true"><img src="assets/icon-logo.png" alt=""></span>NOEVYRA</a>
-  <div class="nav-links">
-    <a href="#why">Why</a>
-    <a href="#setup">Setup</a>
-    <a href="#agents">Agents</a>
-    <a href="#roadmap">Roadmap</a>
-    <a href="#start" class="btn">Get v0.7.0 ↗</a>
+  <div class="nav-inner">
+    <a class="brand" href="#">
+      <div class="mark" aria-hidden="true"><img src="assets/icon-logo.png" alt=""></div>
+      NOEVYRA
+    </a>
+    <div class="nav-links">
+      <a href="#why">Why</a>
+      <a href="#setup">Setup</a>
+      <a href="#agents">Agents</a>
+      <a href="#roadmap">Roadmap</a>
+    </div>
+    <div class="nav-r">
+      <a class="btn-outline" href="https://github.com/WolfCanCode/personal-ai-brain" target="_blank" rel="noopener" style="padding:8px 14px;font-size:13px;font-weight:600;border-radius:7px">GitHub</a>
+      <a class="nav-cta" href="https://github.com/WolfCanCode/personal-ai-brain/releases/latest" target="_blank" rel="noopener">Get v0.7.4 ↗</a>
+    </div>
   </div>
 </nav>
 
-<main id="main">
+<main>
 
 <!-- HERO -->
-<div class="hero">
-  <span class="tag pill"><span class="dot"></span> v0.7.3 · 2,737 skills bundled · Claude · Codex · Cursor · Kiro</span>
-  <h1 style="margin-inline:auto;max-width:820px">One brain.<br>Any agent.<br><span>Zero re-setup.</span></h1>
-  <p class="lead">Run <code>brain setup</code> once. Your stack is detected, 2,737 community skills are searched, MCPs are provisioned — switch between Claude, Codex, Cursor and Kiro without rebuilding anything.</p>
-  <div class="actions">
-    <a href="#setup" class="btn primary">See brain setup ↓</a>
-    <a href="#start" class="btn">Install free →</a>
-  </div>
-  <div class="hero-snippet">
-    <span class="mu"># one-time install</span><br>
-    <span class="p">$</span> <span class="wh">curl -fsSL https://raw.githubusercontent.com/WolfCanCode/personal-ai-brain/main/install.sh | sh</span><br>
-    <span class="p">$</span> <span class="wh">brain init</span>  <span class="ok">✓ 2,737 skills indexed</span><br>
-    <span class="mu"># any project, any time</span><br>
-    <span class="p">$</span> <span class="wh">brain setup</span>  <span class="mu">↑↓ pick · Space select · Enter confirm</span><br>
-    <span class="p">$</span> <span class="wh">brain run kiro "add rate limiting"</span>
-  </div>
-  <div class="fine" style="margin-top:18px">Go · SQLite FTS5 · MCP stdio · No LLM required · MIT</div>
-  <div class="hero-stats-row">
-    <div class="stat"><div class="stat-value accent">2,737</div><div class="stat-label">skills bundled</div></div>
-    <div class="stat"><div class="stat-value">4</div><div class="stat-label">agents supported</div></div>
-    <div class="stat"><div class="stat-value accent">0</div><div class="stat-label">cloud dependencies</div></div>
-    <div class="stat"><div class="stat-value">MIT</div><div class="stat-label">open source</div></div>
+<div class="wrap hero">
+  <div class="hero-grid">
+    <div>
+      <div class="eyebrow"><span class="eyebrow-dot"></span><span class="eyebrow-txt">v0.7.4 · 2,737 skills bundled · Local-first</span></div>
+      <h1>One brain.<br>Any agent.<br><span class="ac">Zero re-setup.</span></h1>
+      <p class="hero-lead">Run <strong>brain setup</strong> once. Your stack is detected, 2,737 community skills are searched per technology, MCPs provisioned — switch between Claude, Codex, Cursor and Kiro without rebuilding anything.</p>
+      <div class="hero-btns">
+        <a class="btn-gold" href="#start">Install free →</a>
+        <a class="btn-outline" href="#setup">See brain setup ↓</a>
+      </div>
+      <div class="hero-meta">Go · SQLite FTS5 · MCP stdio · No LLM required · MIT</div>
+    </div>
+    <div>
+      <div class="term">
+        <div class="tbar">
+          <div class="tc" style="background:#FF5F57"></div>
+          <div class="tc" style="background:#FEBC2E"></div>
+          <div class="tc" style="background:#28C840"></div>
+          <span class="ttitle">brain setup — spring-backend</span>
+        </div>
+        <div class="tbody">
+<span class="t-mu">  Languages  </span><span class="t-wh">java · typescript · shell</span><br>
+<span class="t-mu">  Stacks     </span><span class="t-wh">jvm · spring</span><br>
+<span class="t-mu">  Signals    </span><span class="t-gp">spring  github  containers</span><br>
+<br>
+<span class="t-mu">  From AAS catalog — spring (top 8):</span><br>
+<span class="tbs">◆ SKILL</span><span class="t-wh"> spring-boot-patterns   </span><span class="t-gp">📦 42K</span><br>
+<span class="tbs">◆ SKILL</span><span class="t-wh"> spring-security        </span><span class="t-gp">📦 31K</span><br>
+<span class="tbs">◆ SKILL</span><span class="t-wh"> java-concurrency       </span><span class="t-gp">📦 18K</span><br>
+<span class="tbm">⚙ MCP </span><span class="t-wh"> GitHub MCP             </span><span class="t-nb">⬡ network</span><br>
+<span class="tbm">⚙ MCP </span><span class="t-wh"> Database MCP           </span><span class="t-nb">⬡ network</span><br>
+<br>
+<span class="t-ok">  ✓ provisioned</span><span class="t-wh">  GitHub MCP</span><br>
+<span class="t-ok">  ✓ provisioned</span><span class="t-wh">  spring-boot-patterns</span><br>
+<span class="t-gp">  ✦ Setup complete.</span>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
-<div class="strip">
-  <span>01 / <b>Detect</b></span>
-  <span>02 / <b>Discover</b></span>
-  <span>03 / <b>Select</b></span>
-  <span>04 / <b>Provision</b></span>
-  <span>05 / <b>Run</b></span>
+<!-- STATS -->
+<div class="wrap">
+  <div class="stats-strip">
+    <div class="stat"><div class="stat-v g">2,737</div><div class="stat-l">skills bundled</div></div>
+    <div class="stat"><div class="stat-v">4</div><div class="stat-l">agents supported</div></div>
+    <div class="stat"><div class="stat-v g">0</div><div class="stat-l">cloud dependencies</div></div>
+    <div class="stat"><div class="stat-v">MIT</div><div class="stat-l">open source</div></div>
+  </div>
 </div>
 
 <!-- WHY -->
 <section id="why">
-  <div class="section-top">
-    <div><span class="tag">The everyday cost</span><h2>Stop paying for<br>the same context twice.</h2></div>
-    <p>Every new session or agent switch restarts cold — rescanning the repo, re-reading docs, re-guessing tools.</p>
-  </div>
-  <div class="roadmap">
-    <article class="card">
-      <span class="number">WITHOUT NOEVYRA</span>
-      <h3>Context gets rebuilt every time.</h3>
-      <ul class="list next">
-        <li><span>✗</span>Re-explain stack and constraints every session</li>
-        <li><span>✗</span>Manually find and configure MCPs and skills</li>
-        <li><span>✗</span>Repeat setup when switching from Claude to Kiro</li>
-        <li><span>✗</span>Burn tokens on "just in case" prompts</li>
-        <li><span>✗</span>Lose decisions when context compacts</li>
-      </ul>
-    </article>
-    <article class="card">
-      <span class="number">WITH NOEVYRA</span>
-      <h3>One setup. Every agent gets the head start.</h3>
-      <ul class="list done">
-        <li><span>✓</span>Detect stack and persist profile with <code>brain setup</code></li>
-        <li><span>✓</span>2 737 bundled skills — no sync step, instant search</li>
-        <li><span>✓</span>Arrow-key TUI — pick skills like a pro</li>
-        <li><span>✓</span>MCPs auto-provisioned for Claude, Codex, Cursor, Kiro</li>
-        <li><span>✓</span>Verified decisions survive context resets</li>
-      </ul>
-    </article>
+  <div class="wrap">
+    <div class="section-tag">The everyday cost</div>
+    <h2>Stop paying for<br><span>the same context twice.</span></h2>
+    <div class="why-grid">
+      <div class="why-card">
+        <div class="why-label">WITHOUT NOEVYRA</div>
+        <h3>Context gets rebuilt every session.</h3>
+        <ul class="why-list bad">
+          <li><span style="color:var(--red)">✗</span>Re-explain stack and constraints every new chat</li>
+          <li><span style="color:var(--red)">✗</span>Manually find and configure MCPs per project</li>
+          <li><span style="color:var(--red)">✗</span>Re-setup profile when switching Claude → Kiro</li>
+          <li><span style="color:var(--red)">✗</span>Burn tokens on giant "just in case" prompts</li>
+          <li><span style="color:var(--red)">✗</span>Lose decisions when context compacts</li>
+        </ul>
+      </div>
+      <div class="why-card">
+        <div class="why-label">WITH NOEVYRA</div>
+        <h3>One setup. Every agent gets the head start.</h3>
+        <ul class="why-list">
+          <li><span style="color:var(--green)">✓</span>Detect stack and persist profile with <code>brain setup</code></li>
+          <li><span style="color:var(--green)">✓</span>2,737 skills bundled — instant, offline search</li>
+          <li><span style="color:var(--green)">✓</span>Arrow-key TUI — pick skills like a pro</li>
+          <li><span style="color:var(--green)">✓</span>MCPs auto-provisioned for all four agents</li>
+          <li><span style="color:var(--green)">✓</span>Verified decisions survive context resets</li>
+        </ul>
+      </div>
+    </div>
   </div>
 </section>
 
 <!-- SETUP -->
 <section id="setup">
-  <div class="section-top">
-    <div><span class="tag">Zero setup friction</span><h2>brain setup —<br>one command, any project.</h2></div>
-    <p>Detects your stack, searches 2 737 bundled skills per technology, and lets you provision with arrow keys.</p>
-  </div>
-
-  <!-- Terminal demo -->
-  <div class="terminal">
-    <div class="termbar">
-      <div class="lights"><i></i><i></i><i></i></div>
-      <span>brain setup</span>
-      <span></span>
+  <div class="wrap">
+    <div class="section-tag">Zero setup friction</div>
+    <h2>brain setup.<br>One command.<br><span>Any project.</span></h2>
+    <div class="how-grid">
+      <div>
+        <p class="how-desc">Works with Go, Java, Python, TypeScript, Angular, React, Spring, Django — any stack your profile detects. The profile persists in SQLite and every agent reads it instantly.</p>
+        <div style="margin-top:28px;padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:10px">
+          <div style="font:11px ui-monospace,monospace;color:var(--muted);margin-bottom:12px">Supported agents</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            <span style="border:1px solid var(--border);border-radius:6px;padding:7px 14px;font:12px ui-monospace,monospace;color:var(--subtle)">Claude</span>
+            <span style="border:1px solid var(--border);border-radius:6px;padding:7px 14px;font:12px ui-monospace,monospace;color:var(--subtle)">Codex</span>
+            <span style="border:1px solid var(--border);border-radius:6px;padding:7px 14px;font:12px ui-monospace,monospace;color:var(--subtle)">Cursor</span>
+            <span style="border:1px solid var(--border);border-radius:6px;padding:7px 14px;font:12px ui-monospace,monospace;color:var(--subtle)">Kiro</span>
+            <span style="border:1px solid var(--border);border-radius:6px;padding:7px 14px;font:12px ui-monospace,monospace;color:var(--muted)">+ any MCP client</span>
+          </div>
+        </div>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-n">1</div>
+          <div><h4>Detect</h4><p>Scans up to 4,000 files, parses manifests (go.mod, package.json, pom.xml…), derives language, framework, and operational signals.</p></div>
+        </div>
+        <div class="step">
+          <div class="step-n">2</div>
+          <div><h4>Discover</h4><p>Searches 2,737 bundled AAS community skills per technology keyword. Top 8 per tech, grouped by keyword. No internet needed.</p></div>
+        </div>
+        <div class="step">
+          <div class="step-n">3</div>
+          <div><h4>Select</h4><p>Interactive TUI — arrow keys navigate, Space selects, Enter confirms. Badges show kind (MCP/SKILL/CLI), network, and install counts.</p></div>
+        </div>
+        <div class="step">
+          <div class="step-n">4</div>
+          <div><h4>Persist</h4><p>Profile saved to local SQLite. <code>brain run</code> compiles a context pack from it for any agent, any session — no re-detection.</p></div>
+        </div>
+      </div>
     </div>
-    <div class="terminal-body">
-<span class="p">$</span> <span class="wh">brain setup</span><br>
-<br>
-<span class="hi">  ✦ Noevyra · brain setup</span><br>
-<span class="mu">  ────────────────────────────────────────</span><br>
-<span class="mu">  Languages   </span><span class="wh">java  ·  typescript</span><br>
-<span class="mu">  Stacks      </span><span class="wh">jvm  ·  spring  +3 more</span><br>
-<span class="mu">  Signals     </span><span class="accent" style="color:var(--accent)">spring  github  containers</span><br>
-<br>
-<span class="mu">  Searching AAS skill catalog…</span><br>
-<br>
-<span class="mu">  Built-in recommendations:</span><br>
-<span class="wh">    </span><span class="badge b-mcp">⚙ MCP</span>  <span class="wh">GitHub MCP              </span><span class="b-net">⬡ network</span><br>
-<span class="wh">    </span><span class="badge b-mcp">⚙ MCP</span>  <span class="wh">Database MCP            </span><span class="b-net">⬡ network</span><br>
-<br>
-<span class="mu">  From AAS catalog — spring (top 5):</span><br>
-<span class="wh"> ▶  </span><span class="badge b-skill">◆ SKILL</span>  <span class="wh">spring-boot-patterns    </span><span class="b-pkg">📦 42K</span><br>
-<span class="wh">    </span><span class="badge b-skill">◆ SKILL</span>  <span class="wh">spring-security         </span><span class="b-pkg">📦 31K</span><br>
-<span class="wh">    </span><span class="badge b-skill">◆ SKILL</span>  <span class="wh">spring-data-jpa         </span><span class="b-pkg">📦 28K</span><br>
-<br>
-<span class="mu">  From AAS catalog — java (top 5):</span><br>
-<span class="wh">    </span><span class="badge b-skill">◆ SKILL</span>  <span class="wh">java-concurrency        </span><span class="b-pkg">📦 18K</span><br>
-<span class="wh">    </span><span class="badge b-skill">◆ SKILL</span>  <span class="wh">java-clean-code         </span><span class="b-pkg">📦 12K</span><br>
-<br>
-<span class="mu">  ↑↓ navigate  ·  Space select  ·  Enter confirm  ·  a toggle all</span><br>
-<br>
-<span class="ok">  ✓ provisioned</span>  <span class="wh">GitHub MCP</span><br>
-<span class="ok">  ✓ provisioned</span>  <span class="wh">spring-boot-patterns</span><br>
-<span class="mu">  ⊝ skipped    </span>  <span class="wh">spring-security</span><br>
-<br>
-<span class="hi">  ✦ Setup complete.</span>  <span class="mu">Run 'brain setup --status' to inspect.</span>
-    </div>
-  </div>
-
-  <!-- Badge legend -->
-  <div style="margin-top:20px;padding:20px 24px;border:1px solid var(--line);border-radius:10px;background:var(--panel)">
-    <div class="demo-label" style="margin-bottom:12px">Badge legend</div>
-    <div class="badge-row"><span class="badge b-mcp">⚙ MCP</span><span style="color:var(--muted)">MCP server — written to agent config files</span></div>
-    <div class="badge-row"><span class="badge b-skill">◆ SKILL</span><span style="color:var(--muted)">Skill playbook from the AAS community catalog</span></div>
-    <div class="badge-row"><span class="badge b-cli">▸ CLI</span><span style="color:var(--muted)">CLI tool — checked in PATH</span></div>
-    <div class="badge-row"><span class="b-net">⬡ network</span><span style="color:var(--muted)">Requires network to install</span></div>
-    <div class="badge-row"><span class="b-local">⬡ local</span><span style="color:var(--muted)">Works fully offline</span></div>
-    <div class="badge-row"><span class="b-pkg">📦 42K</span><span style="color:var(--muted)">Install count from the community registry</span></div>
   </div>
 </section>
 
 <!-- AGENTS -->
 <section id="agents">
-  <div class="section-top">
-    <div><span class="tag">Four agents. One brain.</span><h2>Switch agents.<br>Keep the context.</h2></div>
-    <p>The profile is in SQLite, not in any session. Every agent gets the same head start.</p>
-  </div>
-  <div class="demo">
-    <div class="demo-head">
-      <div class="tabs" role="group" aria-label="Choose agent">
-        <button type="button" data-agent="claude"  aria-pressed="true">Claude</button>
-        <button type="button" data-agent="codex"   aria-pressed="false">Codex</button>
-        <button type="button" data-agent="cursor"  aria-pressed="false">Cursor</button>
-        <button type="button" data-agent="kiro"    aria-pressed="false">Kiro</button>
+  <div class="wrap">
+    <div class="section-tag">One interface, four agents</div>
+    <h2>Switch agents.<br><span>Keep the context.</span></h2>
+    <div class="agents-demo" style="margin-top:28px">
+      <div>
+        <div class="demo-label-sm">Launch with compiled context</div>
+        <div class="demo-cmd" id="demo-cmd">brain run claude "add rate limiting"</div>
+        <div class="agents-tabs" role="group" aria-label="Choose agent">
+          <button class="agent-tab" data-agent="claude"  aria-pressed="true">Claude</button>
+          <button class="agent-tab" data-agent="codex"   aria-pressed="false">Codex</button>
+          <button class="agent-tab" data-agent="cursor"  aria-pressed="false">Cursor</button>
+          <button class="agent-tab" data-agent="kiro"    aria-pressed="false">Kiro</button>
+        </div>
+        <p class="demo-note">Context file written at 0600, deleted on agent exit. Nothing leaves the machine. Or call <code>brain_advise</code> from any MCP client.</p>
       </div>
-      <span class="tag">brain run</span>
-    </div>
-    <div class="demo-grid">
-      <div class="demo-pane">
-        <span class="demo-label">Launch with context pack</span>
-        <pre id="demo-command" aria-live="polite">brain run claude "add rate limiting"</pre>
-        <button type="button" class="copy" id="copy-demo">Copy</button>
-        <p style="font-size:11px;color:var(--muted);margin-top:12px">Or call brain_advise from any MCP client.</p>
-      </div>
-      <div class="demo-pane">
-        <span class="demo-label">What the pack carries</span>
-        <div class="context-row"><span>PROFILE</span><div>Detected stack from <code>brain setup</code> — no re-detection needed.</div></div>
-        <div class="context-row"><span>MEMORY</span><div>Verified decisions and project facts.</div></div>
-        <div class="context-row"><span>EVIDENCE</span><div>Attributed excerpts from trusted sources.</div></div>
-        <div class="context-row"><span>TOOLS</span><div>Matched skills, MCPs and CLIs — with reasons and confidence.</div></div>
+      <div>
+        <div class="demo-label-sm">What the pack carries</div>
+        <div class="pack-rows">
+          <div class="pack-row"><span class="pack-tag">PROFILE</span><div>Detected stack from <code>brain setup</code> — no re-detection needed each session.</div></div>
+          <div class="pack-row"><span class="pack-tag">MEMORY</span><div>Verified project decisions and facts you stored with <code>brain remember</code>.</div></div>
+          <div class="pack-row"><span class="pack-tag">EVIDENCE</span><div>Attributed excerpts from explicitly trusted sources, ranked by relevance.</div></div>
+          <div class="pack-row"><span class="pack-tag">TOOLS</span><div>Matched skills, MCPs and CLIs — with confidence scores and reasons.</div></div>
+        </div>
       </div>
     </div>
-    <div class="demo-note">Context file written at <code>0600</code> and deleted on agent exit. Nothing leaves the machine.</div>
   </div>
 </section>
 
 <!-- FEATURES -->
 <section>
-  <div class="section-top">
-    <div><span class="tag">Core capabilities</span><h2>A thinking layer,<br>not another chatbot.</h2></div>
-    <p>Deterministic, model-free, and fully local. Every output is attributable and reviewable.</p>
-  </div>
-  <div class="cards">
-    <article class="card">
-      <div class="number">01 / SETUP</div>
-      <h3>2 737 skills. Zero configuration.</h3>
-      <p>The AAS community catalog ships inside the binary. <code>brain init</code> seeds it automatically. <code>brain sources sync</code> refreshes from upstream whenever you want newer data.</p>
-    </article>
-    <article class="card">
-      <div class="number">02 / ADVISE</div>
-      <h3>Token-budgeted intelligence packs.</h3>
-      <p><code>brain advise "task"</code> compiles a ranked, deduplicated pack of evidence, risks, verification steps and capability recommendations — all within an explicit token limit.</p>
-    </article>
-    <article class="card">
-      <div class="number">03 / REMEMBER</div>
-      <h3>Decisions survive sessions.</h3>
-      <p>User-entered memories are immediately verified. Agent-proposed memories via MCP are held as candidates until you approve them. Nothing gets in verified without a human in the loop.</p>
-    </article>
+  <div class="wrap">
+    <div class="section-tag">Core capabilities</div>
+    <h2>A thinking layer,<br><span>not another chatbot.</span></h2>
+    <div class="feats-grid">
+      <div class="feat"><div class="feat-n">01 / SETUP</div><h3>2,737 skills. Zero config.</h3><p>The AAS community catalog ships inside the binary. <code>brain init</code> seeds it automatically. <code>brain sources sync</code> refreshes from upstream whenever you want newer data.</p></div>
+      <div class="feat"><div class="feat-n">02 / ADVISE</div><h3>Token-budgeted context packs.</h3><p><code>brain advise "task"</code> compiles ranked, deduplicated evidence, risks, verification steps, and capability recommendations — all within an explicit token limit you control.</p></div>
+      <div class="feat"><div class="feat-n">03 / REMEMBER</div><h3>Decisions survive sessions.</h3><p>User-entered memories are immediately verified. Agent proposals via MCP are held as candidates until you approve. Nothing gets in verified without a human in the loop.</p></div>
+    </div>
   </div>
 </section>
 
 <!-- ROADMAP -->
 <section id="roadmap">
-  <div class="section-top">
-    <div><span class="tag">Build in the open</span><h2>Useful baseline.<br>Measured evolution.</h2></div>
-    <p>v0.7.0 ships the embedded catalog, interactive TUI, and Kiro support. The roadmap is public.</p>
-  </div>
-  <div class="roadmap">
-    <article class="card">
-      <h3><span style="color:var(--green)">●</span> Available in v0.7.0</h3>
-      <ul class="list done">
-        <li><span>✓</span>2 737 AAS skills embedded — zero-setup catalog</li>
-        <li><span>✓</span>Interactive TUI — arrow keys + space + enter</li>
-        <li><span>✓</span>Badge-style output — kind · network · 📦 installs</li>
-        <li><span>✓</span>Claude · Codex · Cursor · Kiro support</li>
-        <li><span>✓</span>Token-budgeted context compiler with feedback</li>
-        <li><span>✓</span><code>brain update</code> — self-update from releases</li>
-        <li><span>✓</span>Automated bump-and-release CI</li>
-      </ul>
-    </article>
-    <article class="card">
-      <h3>◌ Next</h3>
-      <ul class="list next">
-        <li><span>→</span>Project identity handshake across MCP clients</li>
-        <li><span>→</span>Session capture and outcome extraction</li>
-        <li><span>→</span>Source-specific extractors for richer knowledge</li>
-        <li><span>→</span>Context quality benchmarks</li>
-        <li><span>→</span>Cross-device sync</li>
-      </ul>
-    </article>
+  <div class="wrap">
+    <div class="section-tag">Build in the open</div>
+    <h2>Useful baseline.<br><span>Measured evolution.</span></h2>
+    <div class="roadmap-grid">
+      <div class="road-card">
+        <h3><span style="color:var(--green)">●</span> Available in v0.7.4</h3>
+        <ul class="road-list">
+          <li><span style="color:var(--green)">✓</span>2,737 AAS skills embedded in binary — zero-setup catalog</li>
+          <li><span style="color:var(--green)">✓</span>Interactive TUI — arrow keys + spacebar selection</li>
+          <li><span style="color:var(--green)">✓</span>Badge-style output — kind · network · 📦 installs</li>
+          <li><span style="color:var(--green)">✓</span>Claude · Codex · Cursor · Kiro support</li>
+          <li><span style="color:var(--green)">✓</span>Token-budgeted context compiler with feedback ranking</li>
+          <li><span style="color:var(--green)">✓</span><code>brain update</code> — self-update from GitHub Releases</li>
+          <li><span style="color:var(--green)">✓</span>Automated bump-and-release CI</li>
+        </ul>
+      </div>
+      <div class="road-card">
+        <h3>◌ Next experiments</h3>
+        <ul class="road-list">
+          <li><span style="color:var(--gold)">→</span>Project identity handshake across MCP clients</li>
+          <li><span style="color:var(--gold)">→</span>Session capture and outcome extraction</li>
+          <li><span style="color:var(--gold)">→</span>Source-specific extractors for richer knowledge</li>
+          <li><span style="color:var(--gold)">→</span>Context quality benchmarks and self-improvement</li>
+          <li><span style="color:var(--gold)">→</span>Cross-device sync with single authoritative writer</li>
+          <li><span style="color:var(--gold)">→</span>Skill version pinning and validated upgrades</li>
+        </ul>
+      </div>
+    </div>
   </div>
 </section>
 
 <!-- GET STARTED -->
-<section id="start" class="get-started">
-  <div>
-    <span class="tag">Made for people who ship</span>
-    <h2>Install once.<br>Use everywhere.</h2>
-    <p>Built by Tommy / WolfCanCode. Noevyra keeps your project knowledge local, private, and portable across every coding agent you use.</p>
-    <p>v0.7.0 ships with 2 737 bundled skills, interactive TUI selection, and Kiro support — as a single verified binary.</p>
-    <div class="actions">
-      <a class="btn" href="https://github.com/WolfCanCode/personal-ai-brain" target="_blank" rel="noopener">GitHub ↗</a>
-      <a class="btn" href="https://github.com/WolfCanCode/personal-ai-brain/releases/tag/v0.7.0" target="_blank" rel="noopener">Download v0.7.0 ↗</a>
+<section id="start">
+  <div class="wrap">
+    <div class="section-tag">Made for people who ship</div>
+    <h2>Install once.<br><span>Use everywhere.</span></h2>
+    <div class="cta-grid">
+      <div class="cta-card">
+        <h3>macOS / Linux</h3>
+        <p>Single Go binary. SHA-256 verified. No Node, Docker, or cloud account required. Installs to <code>~/.local/bin</code> without root.</p>
+        <div class="snippet">
+<span class="t-gp">$</span> curl -fsSL https://raw.githubusercontent.com/WolfCanCode/personal-ai-brain/main/install.sh | sh<br>
+<span class="t-gp">$</span> export PATH="$HOME/.local/bin:$PATH"<br>
+<span class="t-gp">$</span> brain init<br>
+<span class="t-ok">✓</span> 2,737 skills indexed<br>
+<span class="t-gp">$</span> brain setup
+        </div>
+      </div>
+      <div class="cta-card">
+        <h3>Windows · Build from source · MCP</h3>
+        <p>PowerShell installer for Windows. Build from source with Go ≥ 1.26. Already installed? <code>brain update</code> upgrades in-place.</p>
+        <div class="snippet">
+<span class="t-mu"># Windows</span><br>
+<span class="t-gp">></span> irm .../install.ps1 | iex<br><br>
+<span class="t-mu"># From source</span><br>
+<span class="t-gp">$</span> go build -o brain ./cmd/brain<br><br>
+<span class="t-mu"># Already installed?</span><br>
+<span class="t-gp">$</span> brain update
+        </div>
+      </div>
     </div>
-    <div class="author">
-      <span class="avatar">W</span>
-      <div>WolfCanCode<small>Building small. Thinking long-term.</small></div>
+    <div class="author-row">
+      <div class="avatar">W</div>
+      <div>
+        <div>WolfCanCode</div>
+        <small>Building small. Thinking long-term.</small>
+      </div>
     </div>
-  </div>
-  <div class="commands">
-    <div class="commands-top">
-      <span class="demo-label">Install · macOS / Linux</span>
-      <button class="copy" type="button" id="copy-install">Copy</button>
-    </div>
-    <pre id="install-command"><span class="mu"># install</span>
-curl -fsSL https://raw.githubusercontent.com/WolfCanCode/personal-ai-brain/main/install.sh | sh
-export PATH="$HOME/.local/bin:$PATH"
-
-<span class="mu"># init — auto-seeds 2 737 bundled skills</span>
-brain init
-
-<span class="mu"># set up any project</span>
-cd ~/your-project
-brain setup
-
-<span class="mu"># already installed? update in-place</span>
-brain update</pre>
-    <p style="font-size:11px;color:var(--muted);margin-top:12px">SHA-256 verified · No Go or Node required · MIT<br>Windows PowerShell installer available in the repo.</p>
   </div>
 </section>
 
 </main>
 
 <footer>
-  <span>© 2025 WolfCanCode · Noevyra</span>
-  <span>Intelligence that evolves. Locally.</span>
-  <a href="#main">↑ top</a>
+  <div class="wrap" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;width:100%">
+    <span>© 2025 WolfCanCode · Noevyra — Intelligence that evolves.</span>
+    <div class="footer-links">
+      <a href="https://github.com/WolfCanCode/personal-ai-brain" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/WolfCanCode/personal-ai-brain/releases" target="_blank" rel="noopener">Releases</a>
+      <a href="https://github.com/WolfCanCode/personal-ai-brain/tree/main/docs" target="_blank" rel="noopener">Docs</a>
+      <a href="#main">↑ Top</a>
+    </div>
+  </div>
 </footer>
 
 <script>
-const tasks = {
+const cmds = {
   claude:  'brain run claude  "add rate limiting"',
   codex:   'brain run codex   "add rate limiting"',
   cursor:  'brain run cursor  "add rate limiting"',
   kiro:    'brain run kiro    "add rate limiting"',
 };
-const command = document.getElementById('demo-command');
-document.querySelectorAll('[data-agent]').forEach(btn =>
+const el = document.getElementById('demo-cmd');
+document.querySelectorAll('.agent-tab').forEach(btn =>
   btn.addEventListener('click', () => {
-    document.querySelectorAll('[data-agent]').forEach(b => b.setAttribute('aria-pressed', String(b === btn)));
-    command.textContent = tasks[btn.dataset.agent];
+    document.querySelectorAll('.agent-tab').forEach(b => b.setAttribute('aria-pressed', String(b === btn)));
+    el.textContent = cmds[btn.dataset.agent];
   })
 );
-async function copyText(btn, el) {
-  const label = btn.textContent;
-  try { await navigator.clipboard.writeText(el.textContent); btn.textContent = 'Copied ✓'; }
-  catch { const s = window.getSelection(), r = document.createRange(); r.selectNodeContents(el); s.removeAllRanges(); s.addRange(r); btn.textContent = 'Select text'; }
-  setTimeout(() => { btn.textContent = label; }, 2000);
-}
-document.getElementById('copy-demo').addEventListener('click', e => copyText(e.currentTarget, command));
-document.getElementById('copy-install').addEventListener('click', e => copyText(e.currentTarget, document.getElementById('install-command')));
 </script>
 </body>
 </html>

@@ -49,11 +49,16 @@ func SeedEmbeddedCatalog(store *memory.Store) (int, error) {
 		return 0, fmt.Errorf("register catalog source: %w", err)
 	}
 
-	// Supersede any existing malformed chunks before re-importing.
+	// Supersede malformed chunks AND clear the stored content_hash.
+	// saveSource skips re-import when the hash matches — clearing it forces a fresh
+	// parse so chunksFromSkillsIndex runs instead of the markdown fallback.
 	if count > 0 {
 		_, _ = store.DB.Exec(
 			`UPDATE knowledge_items SET status='superseded' WHERE source_id=?`, source.ID)
 	}
+	// Always clear content_hash so saveSource re-chunks (not skips).
+	_, _ = store.DB.Exec(
+		`UPDATE knowledge_sources SET content_hash=NULL WHERE id=?`, source.ID)
 
 	// Import through saveSource — chunksFromSkillsIndex handles the JSON array.
 	n, _, err := saveSource(store, source, embeddedSkillsIndex, "", "")
