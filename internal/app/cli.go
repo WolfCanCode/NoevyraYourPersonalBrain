@@ -19,36 +19,80 @@ import (
 	"github.com/WolfCanCode/personal-ai-brain/internal/memory"
 )
 
-const help = `Noevyra — intelligence that evolves
+// helpEntry is one row in the help table.
+type helpEntry struct{ cmd, desc string }
 
-Usage:
-  brain init [--schedule]            Create private SQLite; optionally install daily timer
-  brain remember "text" [--scope personal|project] [--type decision|...]
-  brain recall "query"               Search verified memory
-  brain context "task"               Generate untrusted context pack
-  brain profile                      Detect project stack from bounded local evidence
-  brain advise "task" [--budget N]    Compile evidence + capability recommendations
-  brain feedback <pack-id> --outcome helpful|partial|harmful [--tokens N]
-  brain sources add URL --name NAME [--tags go,security]
-  brain sources seed|add|list|sync    Manage explicitly trusted knowledge sources
-  brain approve <memory-id>           Approve a candidate explicitly
-  brain status                       Memory counts and local scheduler
-  brain digest [--days 7]             Recent activity
-  brain sync [--sources] [--skills]   Local maintenance; optional trusted-source or skill checks
-  brain skills find "query"           Explicit skills.sh discovery (requires npx)
-  brain skills trust owner/repo@skill --keyword term
-  brain skills list
-  brain run claude|codex|cursor|kiro [task] Launch an installed agent with private context
-  brain setup [--refresh|--dry-run|--status|--no-live-skills] Detect project, discover and provision capabilities
-  brain update [--check]              Download and install the latest release; --check only reports
-  brain mcp                          MCP server over stdio
-  brain mcp-config                   Native MCP launch configuration
-  brain doctor                       Show prerequisites
-  brain version                      Build metadata
+// helpGroups defines all commands grouped by category.
+var helpGroups = []struct {
+	name    string
+	entries []helpEntry
+}{
+	{"Memory", []helpEntry{
+		{"brain init [--schedule]", "Create store · auto-seed 2,737 skills · install daily timer"},
+		{"brain remember \"text\" [--type T]", "Store a verified project memory"},
+		{"brain recall \"query\"", "Full-text search over verified memories"},
+		{"brain context \"task\"", "Generate a simple context pack"},
+		{"brain approve <id>", "Promote an agent-proposed candidate to verified"},
+		{"brain status", "Memory counts, scheduler state, active knowledge"},
+		{"brain digest [--days N]", "Recent memories and event log"},
+	}},
+	{"Intelligence", []helpEntry{
+		{"brain profile", "Detect project stack from bounded evidence (read-only)"},
+		{"brain advise \"task\" [--budget N]", "Full intelligence pack: profile + memories + recommendations"},
+		{"brain feedback <id> --outcome …", "Record pack usefulness · adjusts future ranking"},
+	}},
+	{"Setup & Agents", []helpEntry{
+		{"brain setup [--refresh|--dry-run|--status]", "Detect stack, discover skills, provision capabilities"},
+		{"brain run claude|codex|cursor|kiro", "Launch agent with compiled context pack"},
+	}},
+	{"Sources & Skills", []helpEntry{
+		{"brain sources seed|add|list|sync", "Manage explicitly trusted knowledge sources"},
+		{"brain skills find \"query\"", "Search 2,737 bundled AAS skills (also npx fallback)"},
+		{"brain skills trust owner/repo@skill", "Approve a reviewed community skill"},
+		{"brain skills list", "Show all trusted skills"},
+		{"brain sync [--sources|--skills]", "Local maintenance · optional source/skill refresh"},
+	}},
+	{"System", []helpEntry{
+		{"brain update [--check]", "Self-update from latest GitHub Release"},
+		{"brain mcp", "Start MCP server over stdio"},
+		{"brain mcp-config", "Print agent MCP configuration JSON"},
+		{"brain doctor", "Check prerequisites, tools, and stored profile"},
+		{"brain version", "Build metadata"},
+	}},
+}
 
-BRAIN_HOME overrides ~/.brain. No Node.js is required for memory or MCP.
-Skills integration requires npx; it executes third-party code after your explicit action.
-`
+// renderHelp writes the formatted help to out.
+// In TTY mode it uses gold section headers and muted descriptions.
+// In non-TTY mode it outputs plain text with consistent 46-char left column.
+func renderHelp(out io.Writer) {
+	const cmdWidth = 46
+	if isTTY() {
+		for _, g := range helpGroups {
+			fmt.Fprintln(out)
+			fmt.Fprintln(out, styleAccent.Render("  "+g.name))
+			for _, e := range g.entries {
+				cmd := styleWhite.Render(fmt.Sprintf("  %-*s", cmdWidth, e.cmd))
+				desc := styleMuted.Render(e.desc)
+				fmt.Fprintf(out, "%s %s\n", cmd, desc)
+			}
+		}
+		fmt.Fprintln(out)
+		fmt.Fprintln(out, styleMuted.Render("  BRAIN_HOME overrides ~/.brain · Skills require npx"))
+		fmt.Fprintln(out)
+		return
+	}
+	// Plain text fallback
+	fmt.Fprintln(out, "Noevyra — intelligence that evolves")
+	fmt.Fprintln(out)
+	for _, g := range helpGroups {
+		fmt.Fprintf(out, "  %s:\n", g.name)
+		for _, e := range g.entries {
+			fmt.Fprintf(out, "  %-*s  %s\n", cmdWidth, e.cmd, e.desc)
+		}
+		fmt.Fprintln(out)
+	}
+	fmt.Fprintln(out, "  BRAIN_HOME overrides ~/.brain. Skills require npx.")
+}
 
 func printJSON(out io.Writer, v any) error {
 	e := json.NewEncoder(out)
@@ -112,8 +156,8 @@ func Run(args []string, version, commit, builtAt string, in io.Reader, out, errO
 		if isTTY() {
 			printBanner()
 		}
-		_, err := io.WriteString(out, help)
-		return err
+		renderHelp(out)
+		return nil
 	case "version", "--version":
 		return printJSON(out, map[string]any{"version": version, "commit": commit, "builtAt": builtAt, "go": runtime.Version(), "platform": runtime.GOOS + "/" + runtime.GOARCH})
 	case "mcp-config":
