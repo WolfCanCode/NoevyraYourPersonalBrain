@@ -192,22 +192,26 @@ func printDivider() {
 	fmt.Println(styleMuted.Render(strings.Repeat("─", 60)))
 }
 
-// printBanner shows the Noevyra ASCII banner on TTY — used by brain init
-// and brain help to create a welcoming first impression.
+// printBanner shows the Noevyra brand banner on TTY — used by brain init
+// and brain help. Uses only universally-supported Unicode so it renders
+// cleanly in every terminal and font without misalignment.
 func printBanner() {
 	gold := lipgloss.NewStyle().Foreground(clrGold).Bold(true)
-	navy := lipgloss.NewStyle().Foreground(clrNavy)
 	dim := lipgloss.NewStyle().Foreground(clrGoldDim)
 	mute := styleMuted
+	navy := styleNavy
+
+	line := dim.Render("  ") + gold.Render("─────────────────────────────────")
 
 	fmt.Println()
-	fmt.Println(gold.Render("          ✦"))
-	fmt.Println(gold.Render("       ╭──────╮"))
-	fmt.Println(navy.Render("      ◟  ") + gold.Render("◕") + navy.Render("  ◞  ") + gold.Render("╭────────────────────────────────╮"))
-	fmt.Println(navy.Render("     ◟  ~~  ◞  ") + gold.Render("│  N  O  E  V  Y  R  A          │"))
-	fmt.Println(dim.Render("      ◟─────◞   ") + gold.Render("│  Intelligence that evolves.   │"))
-	fmt.Println(dim.Render("               ") + gold.Render("╰────────────────────────────────╯"))
-	fmt.Println(mute.Render("  ☽  Local · Private · Portable · MIT"))
+	fmt.Printf("  %s  %s\n",
+		gold.Render("☽ ✦"),
+		gold.Render("N O E V Y R A"),
+	)
+	fmt.Println(line)
+	fmt.Printf("     %s\n", navy.Render("Intelligence that evolves."))
+	fmt.Println(line)
+	fmt.Printf("  %s\n", mute.Render("Local · Private · Portable · MIT"))
 	fmt.Println()
 }
 
