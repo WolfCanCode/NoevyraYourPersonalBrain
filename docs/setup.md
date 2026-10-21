@@ -1,142 +1,117 @@
-# Brain setup
+# brain setup
 
-`brain setup` is the fastest way to go from a fresh checkout to a fully configured agent workspace. It runs project detection, capability discovery, user-approved provisioning, and profile persistence in a single interactive command.
+One command — detect, discover, select, provision, persist.
+
+```sh
+brain setup
+```
 
 ---
 
 ## What it does
 
-```
-brain setup
-```
-
-1. **Detect project root** — walks up from the current directory looking for `.git`, up to 10 levels. Falls back to the current directory if none found.
-2. **Scan the repository** — reads up to 4000 files, derives languages, stacks and signals. Parses root-level manifests (`go.mod`, `package.json`, `Cargo.toml`, etc.) for dependency names.
-3. **Display the profile** — prints detected languages, stacks and signals so you can verify before proceeding.
-4. **Check for an existing profile** — if a profile already exists and `--refresh` was not passed, prompts for confirmation before overwriting.
-5. **Discover capabilities** — queries the catalog for all entries whose trigger signals intersect with the detected profile. Ranks up to 10 results by confidence score.
-6. **Present the selection** — shows a numbered list. Enter `all`, `none`, or comma-separated numbers (e.g. `1,3`).
-7. **Provision selected capabilities** — writes MCP config entries, registers approved skills, checks CLI tools.
-8. **Persist the profile** — stores the profile JSON and provisioning results in SQLite. Retains the last 3 profiles per project.
-9. **Log the session** — records a `setup_session` event with outcome (`completed` / `partial` / `failed`).
+| Step | What happens |
+|---|---|
+| **Detect** | Walks up to 10 ancestor dirs for `.git`, scans ≤ 4 000 files, parses manifests |
+| **Profile** | Derives languages, framework signals (angular, spring, django…), operational signals |
+| **Discover** | Searches 2 737 embedded skills + built-in MCP catalog — **per tech**, top 5 each |
+| **Select** | Interactive TUI: ↑↓ navigate · Space select · Enter confirm · a toggle all |
+| **Provision** | Writes MCP config to every detected agent; prompts per-skill approval |
+| **Persist** | Saves profile to SQLite (last 3 per project); any `brain run` reads it instantly |
 
 ---
 
 ## Flags
 
-| Flag | Behaviour |
+| Flag | Effect |
 |---|---|
-| `--status` | Show the stored profile for the current project without running detection |
-| `--refresh` | Re-run detection without the overwrite confirmation prompt |
-| `--dry-run` | Print what would be detected and provisioned; write nothing |
+| `--status` | Show stored profile and provisioned capabilities |
+| `--refresh` | Re-run detection without the overwrite prompt |
+| `--dry-run` | Preview what would be detected and provisioned — writes nothing |
+| `--no-live-skills` | Skip the skill catalog search (fast, offline) |
 
 ---
 
-## The capability catalog
+## What the interactive TUI looks like
 
-The catalog ships with Noevyra and covers these signal values:
+```
+  ✦ Noevyra · brain setup
+  ────────────────────────
+  Languages   java  ·  typescript
+  Stacks      jvm  ·  spring  +3 more
+  Signals     spring  ·  github  ·  containers
 
-| Capability | Kind | Signals | Network |
-|---|---|---|---|
-| GitHub MCP | mcp | `github`, `github-actions`, `ci-cd` | network |
-| Documentation MCP | mcp | `go`, `rust`, `python`, `typescript`, `javascript`, `api` | network |
-| Database MCP | mcp | `database`, `sql`, `postgres`, `mysql`, `sqlite`, `migration` | network |
-| Browser MCP | mcp | `web`, `frontend`, `ui`, `e2e`, `playwright` | network |
-| Security Review Skill | skill | `security`, `auth`, `secret`, `token`, `webhook`, `payment` | network |
-| Figma MCP | mcp | `figma`, `design`, `ui`, `component`, `frontend` | network |
-| API Contract Skill | skill | `api`, `backend`, `schema`, `contract`, `grpc`, `rest` | local |
-| Container Ops Skill | skill | `containers`, `docker`, `compose` | network |
-| Test Strategy Skill | skill | `test`, `bug`, `refactor`, `ci`, `release` | local |
-| ripgrep | cli | `code`, `refactor`, `bug`, `project` | local |
+  Searching AAS skill catalog…
 
-Any skills you have previously trusted with `brain skills trust` and whose keyword matches your profile are also included, with confidence 0.95.
+  Available capabilities:
+
+  Built-in recommendations:
+   ⚙ MCP    GitHub MCP              ⬡ network
+   ⚙ MCP    Documentation MCP       ⬡ network
+   ⚙ MCP    Database MCP            ⬡ network
+
+  From AAS catalog — spring (top 5):
+   ◆ SKILL  spring-boot-patterns    📦 42K
+   ◆ SKILL  spring-security         📦 31K
+   ◆ SKILL  spring-data-jpa         📦 28K
+
+  From AAS catalog — java (top 5):
+   ◆ SKILL  java-concurrency        📦 18K
+   ◆ SKILL  java-clean-code         📦 12K
+
+  ↑↓ navigate  ·  Space select  ·  Enter confirm  ·  a toggle all
+```
+
+---
+
+## Capability catalog
+
+Every release embeds the full [AAS skills catalog](https://github.com/sickn33/agentic-awesome-skills) (~2 737 skills). Searches are per-technology so a Java/Spring project gets Spring and Java results, not generic TypeScript suggestions.
+
+Built-in MCP entries always shown when signals match:
+
+| Capability | Triggered by |
+|---|---|
+| GitHub MCP | `github`, `ci-cd`, `github-actions` |
+| Documentation MCP | `go`, `python`, `angular`, `react`, `api`… |
+| Database MCP | `database`, `sql`, `postgres`, `sqlite`… |
+| Browser MCP | `web`, `angular`, `react`, `e2e`, `playwright` |
+| Figma MCP | `figma`, `design`, `storybook` |
 
 ---
 
 ## MCP provisioning
 
-When you select an MCP capability, Brain writes an `mcpServers` entry to the config file for every agent client it detects in `PATH`:
+When you select an MCP capability, Brain writes to every agent it finds in `PATH`:
 
-| Agent | Binary detected | Config file written |
+| Agent | Binary | Config file |
 |---|---|---|
 | Claude | `claude` | `~/.claude.json` |
 | Codex | `codex` | `~/.codex/config.json` |
 | Cursor | `cursor-agent` | `~/.cursor/mcp.json` |
 | Kiro | `kiro` | `~/.kiro/settings/mcp.json` |
 
-The write is atomic (write-to-temp + rename) and idempotent — running `brain setup` again updates the entry in place without duplicating it.
-
----
-
-## Inspecting a stored profile
-
-```sh
-brain setup --status
-```
-
-Shows:
-- Project ID and root
-- Detection timestamp
-- Detected languages, stacks and signals
-- Provisioned capabilities and their outcomes
-
----
-
-## Example session
-
-```
-$ brain setup
-
-Detected profile:
-  Languages:  go, typescript
-  Stacks:     gin, react, pgx
-  Signals:    ci-cd, database, git, github, web
-
-Available capabilities:
-   1. [mcp][network] GitHub MCP — Inspect issues, pull requests, commits and CI state.
-   2. [mcp][network] Documentation MCP — Retrieve current primary documentation.
-   3. [mcp][network] Database MCP — Inspect schema and query results.
-   4. [mcp][network] Browser MCP — Verify browser behavior and UI state.
-   5. [skill][network] Security Review Skill — Threat-model and unsafe-input checklist.
-   6. [skill][local] API Contract Skill — Request/response and compatibility constraints.
-   7. [skill][local] Test Strategy Skill — Smallest useful unit, integration, E2E checks.
-   8. [cli][local] ripgrep — Fast code search.
-
-Select capabilities to provision (all/none/1,2,3): 1,3,8
-
-  Skill: Security Review Skill
-  Structured checklist for auth, secrets, injection, and webhook security.
-  Approve? [y/N]: (skipped — not selected)
-
-Provisioning summary:
-  GitHub MCP                     provisioned
-  Database MCP                   provisioned
-  ripgrep                        failed (rg not found in PATH; install it manually)
-
-Setup complete. Run 'brain setup --status' to inspect the stored profile.
-```
+Writes are atomic and idempotent — running `brain setup` again updates in place.
 
 ---
 
 ## Switching agents
 
-Because the profile is stored in the local database (not in any agent session), switching from Claude to Kiro requires no re-setup:
+The profile is stored in SQLite, not in any agent session. After setup:
 
 ```sh
-brain run kiro  "add a search endpoint"
-brain run claude "add a search endpoint"
+brain run kiro "add search endpoint"
+# or
+brain run claude "add search endpoint"
 ```
 
-Both get the same context pack, which includes the stored profile.
+Both get the same profile and capability context.
 
 ---
 
-## Refreshing after project changes
-
-When you add a major dependency or change your CI setup, re-run detection:
+## Refreshing after major changes
 
 ```sh
-brain setup --refresh
+brain setup --refresh   # re-detect, no overwrite prompt
+brain setup --status    # inspect current stored profile
 ```
-
-The old profile is kept (up to 3 versions) and a new one is stored as the current.

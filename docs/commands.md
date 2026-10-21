@@ -1,261 +1,175 @@
 # Command reference
 
-All commands read from `$BRAIN_HOME` (default `~/.brain/brain.sqlite`). Set `BRAIN_HOME` to use a different location.
+`BRAIN_HOME` overrides `~/.brain` for the store location.
 
 ---
 
 ## brain init
 
-```
+```sh
 brain init [--schedule]
 ```
 
-Creates the SQLite store and prints the MCP configuration JSON.
-
-`--schedule` — registers a daily maintenance + source-refresh timer:
-- **macOS**: user `launchd` LaunchAgent at `08:00`
-- **Linux**: user `systemd` timer with `Persistent=true`
-- **Windows**: not yet automated; run `brain sync --sources` manually
+Creates `~/.brain/brain.sqlite` and **auto-seeds 2 737 embedded skills** from the bundled AAS catalog. `--schedule` registers a daily sync timer (macOS `launchd` / Linux `systemd`).
 
 ---
 
 ## brain setup
 
-```
-brain setup [--refresh] [--dry-run] [--status]
+```sh
+brain setup [--refresh] [--dry-run] [--status] [--no-live-skills]
 ```
 
-Detects the current project's stack from bounded repository metadata, discovers best-practice capabilities from the catalog, prompts for your selection, provisions approved items, and persists the profile.
+Detects project stack → searches skill catalog per technology → interactive TUI selection → provisions MCPs and skills → persists profile.
 
 | Flag | Effect |
 |---|---|
-| _(none)_ | Full setup run; prompts before overwriting an existing profile |
-| `--refresh` | Re-run detection without the overwrite prompt |
-| `--dry-run` | Print what would be detected and provisioned; write nothing |
-| `--status` | Display the stored profile — languages, stacks, signals, provisioned capabilities, timestamp |
-
-**Project detection** scans up to 4000 files, skipping `node_modules`, `vendor`, `dist`, `.git`, etc. It parses root-level manifests (`go.mod`, `package.json`, `Cargo.toml`, `pyproject.toml`, `requirements.txt`, `pom.xml`, `build.gradle`) to extract dependency names into the `stacks` field.
-
-**Capability types** discovered:
-
-| Kind | What is provisioned |
-|---|---|
-| `mcp` | Writes an `mcpServers` entry to every detected agent's config file |
-| `skill` | Prompts for per-skill approval, then registers in the local skill trust store |
-| `cli` | Checks whether the tool is in `PATH`; reports if manual install is needed |
-
----
-
-## brain remember
-
-```
-brain remember "text" [--type TYPE] [--scope SCOPE]
-```
-
-Store a verified memory directly from the CLI.
-
-`--type` — one of: `decision` · `identity` · `semantic` · `episodic` · `project` · `procedural`  
-`--scope` — `project` (default, scoped to current repo) or `personal` (available across all projects)
-
----
-
-## brain recall
-
-```
-brain recall "query" 
-```
-
-Full-text search across verified memories scoped to the current project and personal memories.
-
----
-
-## brain context
-
-```
-brain context "task"
-```
-
-Returns verified memories relevant to a task as a simple JSON pack. For the full intelligence pack with profile and capability recommendations, use `brain advise`.
-
----
-
-## brain advise
-
-```
-brain advise "task" [--budget N]
-```
-
-Compiles a full intelligence pack:
-- Project profile (languages, stacks, signals)
-- Reasoning frame (approach, risks, verification gates)
-- Ranked context items (memories + trusted source excerpts)
-- Capability recommendations (skills / MCPs / CLIs) with confidence scores
-
-`--budget N` — token budget (128–16000; default adapts from past feedback outcomes).
-
-Returns a JSON pack with a stable `id` you can pass to `brain feedback`.
-
----
-
-## brain feedback
-
-```
-brain feedback <pack-id> --outcome helpful|partial|harmful [--tokens N] [--notes "…"]
-```
-
-Records the pack outcome and adjusts quality scores for knowledge items in that pack. After ≥3 helpful outcomes the compiler adapts its default token budget.
-
----
-
-## brain profile
-
-```
-brain profile
-```
-
-Reads the project without writing anything. Returns detected languages, stacks, signals, manifests, and file counts as JSON.
+| `--status` | Show stored profile; no detection or provisioning |
+| `--refresh` | Re-detect without overwrite confirmation |
+| `--dry-run` | Preview only — no writes |
+| `--no-live-skills` | Skip catalog search (useful offline) |
 
 ---
 
 ## brain run
 
-```
+```sh
 brain run claude|codex|cursor|kiro [task]
 ```
 
-Compiles a context pack, writes it to a `0600` temp file, and starts the agent with the file path in `BRAIN_CONTEXT_FILE`. The file is deleted when the agent exits.
-
-If the agent binary is not found in `PATH`, `brain run` prints a specific install message and exits without starting anything.
+Compiles a context pack, writes it to a `0600` temp file, sets `BRAIN_CONTEXT_FILE`, and launches the agent. File is deleted on agent exit.
 
 ---
 
-## brain sources
+## brain advise
 
-```
-brain sources seed
-brain sources add URL --name NAME [--tags go,security]
-brain sources list
-brain sources sync
-brain sources pause <source-id>
+```sh
+brain advise "task" [--budget N]
 ```
 
-Manage the set of HTTPS sources you explicitly trust. `sync` does a conditional fetch (respects `ETag` / `Last-Modified`) and splits content into searchable chunks with provenance metadata.
+Returns a full JSON intelligence pack: profile, reasoning frame, ranked evidence, capability recommendations. `--budget` range: 128–16 000 tokens (default adapts from past outcomes).
 
-`seed` registers the bundled starter catalog:
-- Go code review comments
-- OWASP secure coding with AI
-- MCP security best practices
+---
+
+## brain remember
+
+```sh
+brain remember "text" [--type TYPE] [--scope project|personal]
+```
+
+Types: `decision` · `identity` · `semantic` · `episodic` · `project` · `procedural`
+
+---
+
+## brain recall / brain context
+
+```sh
+brain recall "query"
+brain context "task"
+```
+
+FTS5 search over verified memories. `context` wraps the result in a task-labelled pack.
+
+---
+
+## brain feedback
+
+```sh
+brain feedback <pack-id> --outcome helpful|partial|harmful [--tokens N]
+```
+
+Records pack quality. After ≥ 3 helpful outcomes the compiler adapts its default budget.
+
+---
+
+## brain profile
+
+```sh
+brain profile
+```
+
+Read-only project detection. Returns detected languages, stacks, signals, and file counts as JSON.
 
 ---
 
 ## brain skills
 
-```
-brain skills find "query"
+```sh
+brain skills find "query"       # search 2 737 embedded skills
 brain skills trust owner/repo@skill --keyword TERM
 brain skills list
 ```
 
-`find` calls the external `skills.sh` CLI (requires `npx`). Review the skill source before trusting.  
-`trust` adds the skill to the local trust store. Brain matches it against tasks by the keyword you provide.
+`find` searches the local embedded catalog instantly. Falls back to `npx skills find` if the store is unavailable. `trust` registers a skill for keyword-based matching in `brain run`.
 
 ---
 
-## brain approve
+## brain sources
 
+```sh
+brain sources seed              # register AAS + Go, OWASP, MCP starter sources
+brain sources add URL --name N  # trust an additional HTTPS source
+brain sources sync              # fetch all registered sources + refresh catalog
+brain sources list
+brain sources pause <id>
 ```
-brain approve <memory-id>
-```
-
-Promotes an agent-proposed candidate memory to verified status. Candidates are created when an agent calls `brain_remember` through MCP.
 
 ---
 
 ## brain update
 
-```
-brain update [--check]
+```sh
+brain update          # download latest release, verify SHA-256, replace binary
+brain update --check  # report available version without installing
 ```
 
-`--check` — report the latest release version and whether it is newer than the installed binary; do not install.
+Atomically replaces the running binary (write-then-rename). Restart `brain mcp` processes after update.
 
-Without `--check` — downloads the matching release archive for the current OS/arch, verifies the SHA-256 checksum, extracts the binary, and atomically replaces the running executable. Restart any running `brain mcp` processes to pick up the new version.
+---
+
+## brain approve
+
+```sh
+brain approve <memory-id>
+```
+
+Promotes an agent-proposed candidate memory to verified.
 
 ---
 
 ## brain sync
 
-```
+```sh
 brain sync [--sources] [--skills] [--online]
 ```
 
-Runs local maintenance (expires stale memories, records a digest event).
-
-`--sources` — also fetches registered sources with conditional requests.  
-`--skills` — also runs `npx skills check`.  
-`--online` — alias for `--sources --skills`.
+Local maintenance (expire stale memories). `--sources` fetches registered sources. `--online` = `--sources --skills`.
 
 ---
 
-## brain digest
+## brain mcp / brain mcp-config
 
+```sh
+brain mcp         # start MCP server over stdio
+brain mcp-config  # print JSON config for agent clients
 ```
-brain digest [--days N]
-```
-
-Returns recent events and memories. Default: 1 day. Range: 1–3650 days.
-
----
-
-## brain mcp
-
-```
-brain mcp
-```
-
-Starts the MCP server over stdio. Connect your agent client to the absolute path of the binary with `args: ["mcp"]`. See [MCP integration](mcp.md).
-
----
-
-## brain mcp-config
-
-```
-brain mcp-config
-```
-
-Prints the JSON block to paste into your agent's MCP configuration.
 
 ---
 
 ## brain doctor
 
-```
+```sh
 brain doctor
 ```
 
-Reports:
-- Installed version, Go version, platform
-- Store path
-- Presence in `PATH` of: `git`, `claude`, `codex`, `cursor-agent`, `kiro`, `npx`
-- Scheduler status
-- Whether a stored project profile exists for the current directory
+Shows version, platform, tool availability (git, claude, codex, cursor-agent, kiro, npx), scheduler status.
 
 ---
 
-## brain status
+## brain status / brain digest / brain version
 
-```
-brain status
-```
-
-Reports memory counts (total, verified, candidates), last sync time, active knowledge items, and project identity.
-
----
-
-## brain version
-
-```
+```sh
+brain status          # memory counts, project ID, scheduler
+brain digest [--days N]
 brain version
 ```
-
-Prints version, commit SHA, build timestamp, Go version, and platform as JSON.
