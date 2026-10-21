@@ -227,29 +227,61 @@ func parseSkillOutput(raw, keyword string) []intelligence.ProvisionableCapabilit
 	return caps
 }
 
-// searchLiveSkills calls `npx skills find <keyword>` for each keyword and
-// returns parsed skill capabilities not already present in the seen map.
-// Errors are soft-logged to errOut so a missing npx or network failure does
-// not block the rest of the setup flow.
-func searchLiveSkills(keywords []string, seen map[string]bool, out, errOut io.Writer) []intelligence.ProvisionableCapability {
-	if _, err := exec.LookPath("npx"); err != nil {
+// searchCatalogSkills queries the locally cached AAS skills catalog
+// (seeded by brain sources seed && brain sources sync) for the top 10
+// skills most relevant to the detected project profile.
+// If the catalog has not been seeded it falls back to npx skills find
+// and prints a hint to seed the catalog.
+func searchCatalogSkills(profile intelligence.ProjectProfile, store *memory.Store, seen map[string]bool, out, errOut io.Writer, skipLive bool) []intelligence.ProvisionableCapability {
+	seeded, err := intelligence.CatalogSeeded(store)
+	if err != nil {
+		fmt.Fprintf(errOut, "brain: catalog check failed: %v\n", err)
+	}
+	if seeded {
+		keywords := setupKeywords(profile)
+		query := strings.Join(keywords, " ")
+		results, searchErr := intelligence.SearchSkillsCatalog(store, query, 10)
+		if searchErr != nil {
+			fmt.Fprintf(errOut, "brain: catalog search failed: %v\n", searchErr)
+		} else {
+			caps := []intelligence.ProvisionableCapability{}
+			for _, c := range results {
+				key := "skill:" + c.Ref
+				if seen[key] {
+					continue
+				}
+				seen[key] = true
+				caps = append(caps, c)
+			}
+			return caps
+		}
+	}
+	// Catalog not seeded — print hint and optionally fall back to npx
+	fmt.Fprintln(out, "  AAS skill catalog not found locally.")
+	fmt.Fprintln(out, "  Run 'brain sources seed && brain sources sync' to index 2 700+ skills for offline search.")
+	if skipLive {
 		return nil
 	}
+	// npx fallback
+	if _, lookErr := exec.LookPath("npx"); lookErr != nil {
+		return nil
+	}
+	keywords := setupKeywords(profile)
 	caps := []intelligence.ProvisionableCapability{}
 	for _, kw := range keywords {
-		fmt.Fprintf(out, "  Searching skills.sh for %q…\n", kw)
-		raw, err := external("npx", []string{"--yes", "skills", "find", kw})
-		if err != nil {
-			fmt.Fprintf(errOut, "brain: skills search for %q unavailable: %v\n", kw, err)
+		fmt.Fprintf(out, "  Searching skills.sh for %q (npx fallback)…\n", kw)
+		raw, npxErr := external("npx", []string{"--yes", "skills", "find", kw})
+		if npxErr != nil {
+			fmt.Fprintf(errOut, "brain: npx skills find %q: %v\n", kw, npxErr)
 			continue
 		}
-		for _, cap := range parseSkillOutput(raw, kw) {
-			key := "skill:" + cap.Ref
+		for _, c := range parseSkillOutput(raw, kw) {
+			key := "skill:" + c.Ref
 			if seen[key] {
 				continue
 			}
 			seen[key] = true
-			caps = append(caps, cap)
+			caps = append(caps, c)
 		}
 	}
 	return caps
@@ -341,12 +373,9 @@ func runSetup(store *memory.Store, project memory.Project, args []string, in io.
 		seen[c.Kind+":"+c.Ref] = true
 	}
 	var liveCaps []intelligence.ProvisionableCapability
-	if !skipLive {
-		keywords := setupKeywords(profile)
-		if len(keywords) > 0 {
-			fmt.Fprintln(out, "\nSearching skills.sh for project-relevant skills…")
-			liveCaps = searchLiveSkills(keywords, seen, out, errOut)
-		}
+	if len(setupKeywords(profile)) > 0 {
+		fmt.Fprintln(out, "\nSearching AAS skill catalog…")
+		liveCaps = searchCatalogSkills(profile, store, seen, out, errOut, skipLive)
 	}
 
 	if len(catalogCaps) == 0 && len(liveCaps) == 0 {

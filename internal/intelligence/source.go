@@ -19,7 +19,7 @@ import (
 	"github.com/WolfCanCode/personal-ai-brain/internal/memory"
 )
 
-const maxSourceBytes = 2 * 1024 * 1024
+const maxSourceBytes = 4 * 1024 * 1024
 
 type Source struct {
 	ID           string  `json:"id"`
@@ -48,6 +48,8 @@ var starterSources = []struct {
 	{"Go code review comments", "https://raw.githubusercontent.com/golang/wiki/master/CodeReviewComments.md", "go,review,style"},
 	{"OWASP secure coding with AI", "https://raw.githubusercontent.com/OWASP/CheatSheetSeries/master/cheatsheets/Secure_Coding_with_AI_Cheat_Sheet.md", "ai,agent,security,review"},
 	{"MCP security best practices", "https://raw.githubusercontent.com/modelcontextprotocol/modelcontextprotocol/main/docs/docs/2026-07-28/tutorials/security/security_best_practices.mdx", "mcp,security,oauth,agent"},
+	// Agentic Awesome Skills catalog — 2 700+ community skills indexed locally for fast, offline search.
+	{"AAS skills catalog", "https://raw.githubusercontent.com/sickn33/agentic-awesome-skills/main/skills_index.json", "skills,catalog,aas"},
 }
 
 func normalizeTags(value string) string {

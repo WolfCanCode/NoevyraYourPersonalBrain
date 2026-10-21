@@ -447,12 +447,46 @@ func skills(s *memory.Store, args []string, out io.Writer) error {
 		if len(args) == 0 {
 			return errors.New("search term required")
 		}
-		r, e := external("npx", []string{"--yes", "skills", "find", strings.Join(args, " ")})
+		query := strings.Join(args, " ")
+		seeded, seedErr := intelligence.CatalogSeeded(s)
+		if seedErr == nil && seeded {
+			// Search the locally cached AAS catalog — fast, offline, top 10.
+			caps, searchErr := intelligence.SearchSkillsCatalog(s, query, 10)
+			if searchErr != nil {
+				return fmt.Errorf("catalog search: %w", searchErr)
+			}
+			if len(caps) == 0 {
+				_, e := fmt.Fprintf(out, "No skills matched %q in the local catalog.\n", query)
+				return e
+			}
+			fmt.Fprintf(out, "Top %d skills matching %q:\n\n", len(caps), query)
+			for i, c := range caps {
+				fmt.Fprintf(out, "  %2d. %s\n      %s\n\n", i+1, c.Ref, c.Reason)
+			}
+			fmt.Fprintf(out, "Use 'brain skills trust <ref> --keyword <term>' to approve a skill.\n")
+			return nil
+		}
+		// Catalog not yet seeded — fall back to npx and cap at 10 results.
+		fmt.Fprintln(out, "Local AAS catalog not found. Run 'brain sources seed && brain sources sync' to enable fast offline search.")
+		fmt.Fprintln(out, "Falling back to npx…")
+		r, e := external("npx", []string{"--yes", "skills", "find", query})
 		if e != nil {
 			return fmt.Errorf("skills discovery: %w: %s", e, r)
 		}
-		_, e = io.WriteString(out, r)
-		return e
+		// Print only first 10 non-empty lines to avoid flooding the terminal.
+		lines, shown := strings.Split(r, "\n"), 0
+		for _, line := range lines {
+			if strings.TrimSpace(line) == "" {
+				continue
+			}
+			if shown >= 10 {
+				fmt.Fprintln(out, "  … (use local catalog for full results)")
+				break
+			}
+			fmt.Fprintln(out, " ", line)
+			shown++
+		}
+		return nil
 	}
 	return errors.New("use skills find|trust|list")
 }
