@@ -37,6 +37,7 @@ nav{border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;back
 .nav-r{display:flex;align-items:center;gap:12px}
 .nav-cta{background:var(--gold);color:#150F00;border:none;border-radius:7px;padding:8px 16px;font:700 13px system-ui;letter-spacing:-.1px}
 .nav-cta:hover{filter:brightness(1.08)}
+.nav-github{padding:8px 14px;font-size:13px;font-weight:600;border-radius:7px}
 /* ── Hero ── */
 .hero{padding:80px 0 64px}
 .hero-grid{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:start}
@@ -132,8 +133,91 @@ footer{padding:28px 0;display:flex;justify-content:space-between;align-items:cen
 .footer-links{display:flex;gap:20px}
 .footer-links a:hover{color:var(--text)}
 /* ── Responsive ── */
-@media(max-width:860px){.hero-grid,.how-grid,.agents-demo,.cta-grid,.roadmap-grid{grid-template-columns:1fr}.why-grid,.feats-grid{grid-template-columns:1fr 1fr}}
-@media(max-width:580px){.wrap,.nav-inner{padding-inline:20px}.nav-links{display:none}h1{font-size:38px;letter-spacing:-2px}.stats-strip{grid-template-columns:1fr 1fr}.stat{border-bottom:1px solid var(--border)}.why-grid,.feats-grid,.roadmap-grid{grid-template-columns:1fr}section{padding:56px 0}.hero{padding:56px 0 48px}}
+/* ── Tablet (≤ 860px) ── */
+@media(max-width:860px){
+  .hero-grid,.how-grid,.agents-demo,.cta-grid,.roadmap-grid{grid-template-columns:1fr}
+  .why-grid,.feats-grid{grid-template-columns:1fr 1fr}
+  .hero{padding:64px 0 48px}
+  .hero-lead{max-width:none}
+  section{padding:64px 0}
+}
+
+/* ── Mobile (≤ 560px) ── */
+@media(max-width:560px){
+  /* Layout */
+  .wrap,.nav-inner{padding-inline:18px}
+
+  /* Nav: hide links + GitHub btn, keep brand + CTA only */
+  .nav-links,.nav-github{display:none}
+  .nav-inner{height:56px}
+
+  /* Hero */
+  .hero{padding:44px 0 36px}
+  h1{font-size:clamp(32px,8.5vw,42px);letter-spacing:-1.8px}
+  .hero-lead{font-size:14px;max-width:none;margin-bottom:24px}
+  .hero-btns{flex-direction:column;gap:10px}
+  .btn-gold,.btn-outline{text-align:center;padding:13px 20px;width:100%}
+  .eyebrow-txt{font-size:10px;letter-spacing:.6px}
+
+  /* Terminal: allow horizontal scroll so demo stays readable */
+  .term{border-radius:10px}
+  .tbody{font:11px/1.9 ui-monospace,monospace;padding:14px 16px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+  /* Stats: 2×2 with proper inner borders */
+  .stats-strip{grid-template-columns:1fr 1fr}
+  .stat{padding:18px 0;border-right:1px solid var(--border);border-bottom:1px solid var(--border)}
+  .stat:nth-child(2n){border-right:0}
+  .stat:nth-child(3),.stat:nth-child(4){border-bottom:0}
+  .stat-v{font-size:20px}
+
+  /* Sections */
+  section{padding:48px 0}
+  h2{font-size:clamp(24px,7vw,30px);letter-spacing:-.8px}
+  .section-tag{font-size:10px}
+
+  /* All 2-col grids → 1 col */
+  .why-grid,.feats-grid,.roadmap-grid,.cta-grid{grid-template-columns:1fr}
+
+  /* Cards: tighten padding */
+  .why-card,.feat,.road-card,.cta-card{padding:20px}
+  .cta-card p{font-size:13px}
+
+  /* How steps */
+  .how-grid{margin-top:24px;gap:32px}
+  .step{gap:14px;padding:14px 0}
+  .step-n{width:22px;height:22px;font-size:10px}
+
+  /* Agents */
+  .agents-tabs{gap:5px}
+  .agent-tab{padding:7px 11px;font-size:11px}
+  .demo-cmd{font-size:11px;word-break:break-all;white-space:normal;line-height:1.5;padding:12px 14px}
+
+  /* Pack rows */
+  .pack-row{font-size:12px;gap:10px}
+
+  /* Snippet: scroll wide commands */
+  .snippet{font-size:11px;line-height:1.9;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:pre}
+
+  /* Author row */
+  .author-row{margin-top:28px}
+
+  /* Footer */
+  footer .wrap{flex-direction:column;align-items:flex-start;gap:14px}
+  .footer-links{flex-wrap:wrap;gap:12px}
+  footer{padding:24px 0}
+
+  /* Supported agents pills box */
+  .how-grid>div:first-child>div:last-child{margin-top:20px}
+}
+
+/* ── Very small (≤ 360px) ── */
+@media(max-width:360px){
+  h1{font-size:30px;letter-spacing:-1.5px}
+  .wrap,.nav-inner{padding-inline:14px}
+  .snippet,.tbody{font-size:10px}
+  .hero-btns .btn-gold,.hero-btns .btn-outline{padding:12px 16px;font-size:12px}
+}
+
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -152,8 +236,8 @@ footer{padding:28px 0;display:flex;justify-content:space-between;align-items:cen
       <a href="#roadmap">Roadmap</a>
     </div>
     <div class="nav-r">
-      <a class="btn-outline" href="https://github.com/WolfCanCode/personal-ai-brain" target="_blank" rel="noopener" style="padding:8px 14px;font-size:13px;font-weight:600;border-radius:7px">GitHub</a>
-      <a class="nav-cta" href="https://github.com/WolfCanCode/personal-ai-brain/releases/latest" target="_blank" rel="noopener">Get v0.7.4 ↗</a>
+      <a class="btn-outline nav-github" href="https://github.com/WolfCanCode/personal-ai-brain" target="_blank" rel="noopener">GitHub</a>
+      <a class="nav-cta" href="https://github.com/WolfCanCode/personal-ai-brain/releases/latest" target="_blank" rel="noopener">Get v0.8.1 ↗</a>
     </div>
   </div>
 </nav>
@@ -164,7 +248,7 @@ footer{padding:28px 0;display:flex;justify-content:space-between;align-items:cen
 <div class="wrap hero">
   <div class="hero-grid">
     <div>
-      <div class="eyebrow"><span class="eyebrow-dot"></span><span class="eyebrow-txt">v0.7.4 · 2,737 skills bundled · Local-first</span></div>
+      <div class="eyebrow"><span class="eyebrow-dot"></span><span class="eyebrow-txt">v0.8.1 · 2,737 skills bundled · Local-first</span></div>
       <h1>One brain.<br>Any agent.<br><span class="ac">Zero re-setup.</span></h1>
       <p class="hero-lead">Run <strong>brain setup</strong> once. Your stack is detected, 2,737 community skills are searched per technology, MCPs provisioned — switch between Claude, Codex, Cursor and Kiro without rebuilding anything.</p>
       <div class="hero-btns">
@@ -335,7 +419,7 @@ footer{padding:28px 0;display:flex;justify-content:space-between;align-items:cen
     <h2>Useful baseline.<br><span>Measured evolution.</span></h2>
     <div class="roadmap-grid">
       <div class="road-card">
-        <h3><span style="color:var(--green)">●</span> Available in v0.7.4</h3>
+        <h3><span style="color:var(--green)">●</span> Available in v0.8.1</h3>
         <ul class="road-list">
           <li><span style="color:var(--green)">✓</span>2,737 AAS skills embedded in binary — zero-setup catalog</li>
           <li><span style="color:var(--green)">✓</span>Interactive TUI — arrow keys + spacebar selection</li>
