@@ -9,24 +9,27 @@ import (
 )
 
 // isTTY returns true when stdout is a real terminal (not a pipe/test/CI).
-// lipgloss also auto-detects this and strips color codes when false.
 func isTTY() bool {
 	fi, err := os.Stdout.Stat()
 	return err == nil && fi.Mode()&os.ModeCharDevice != 0
 }
 
-// ── Palette ────────────────────────────────────────────────────────────────
+// ── Brand palette — derived from the Noevyra logo ─────────────────────────
+//
+//   Gold   #D4A843  (crescent moon, hair highlights, wordmark)
+//   Navy   #7B9FCB  (face silhouette — lightened for dark-bg readability)
+//   Dark gold bg    #2A1C00
+//   Dark navy bg    #0D1F3A
 
 var (
-	clrPurple = lipgloss.Color("#c7b4ff")
-	clrGreen  = lipgloss.Color("#b4e8bf")
-	clrRed    = lipgloss.Color("#ff6b6b")
-	clrYellow = lipgloss.Color("#fcd34d")
-	clrBlue   = lipgloss.Color("#7dd3fc")
-	clrOrange = lipgloss.Color("#fb923c")
-	clrMuted  = lipgloss.Color("#888899")
-	clrWhite  = lipgloss.Color("#f4f2ee")
-	clrPanel  = lipgloss.Color("#19191f")
+	clrGold    = lipgloss.Color("#D4A843") // primary accent — logo gold
+	clrGoldDim = lipgloss.Color("#9B7A2A") // dim gold for secondary hints
+	clrNavy    = lipgloss.Color("#7B9FCB") // lightened logo navy — readable on dark
+	clrGreen   = lipgloss.Color("#7ECE94") // success
+	clrRed     = lipgloss.Color("#FF6B6B") // error
+	clrAmber   = lipgloss.Color("#E8A545") // warm amber (network / install badges)
+	clrMuted   = lipgloss.Color("#7A7A8E") // muted text
+	clrWhite   = lipgloss.Color("#F4F2EE") // primary text
 )
 
 // ── Base styles ────────────────────────────────────────────────────────────
@@ -36,21 +39,22 @@ var (
 	styleMuted   = lipgloss.NewStyle().Foreground(clrMuted)
 	styleSuccess = lipgloss.NewStyle().Foreground(clrGreen).Bold(true)
 	styleError   = lipgloss.NewStyle().Foreground(clrRed).Bold(true)
-	styleWarn    = lipgloss.NewStyle().Foreground(clrYellow)
-	styleAccent  = lipgloss.NewStyle().Foreground(clrPurple).Bold(true)
+	styleWarn    = lipgloss.NewStyle().Foreground(clrAmber)
+	styleAccent  = lipgloss.NewStyle().Foreground(clrGold).Bold(true)
+	styleNavy    = lipgloss.NewStyle().Foreground(clrNavy)
 	styleWhite   = lipgloss.NewStyle().Foreground(clrWhite)
 
 	styleHeader = lipgloss.NewStyle().
-			Foreground(clrPurple).
+			Foreground(clrGold).
 			Bold(true).
 			BorderStyle(lipgloss.NormalBorder()).
 			BorderBottom(true).
-			BorderForeground(lipgloss.Color("#303039")).
+			BorderForeground(lipgloss.Color("#3A3020")).
 			PaddingBottom(1).
 			MarginBottom(1)
 
 	styleSection = lipgloss.NewStyle().
-			Foreground(clrMuted).
+			Foreground(clrGoldDim).
 			Bold(true).
 			MarginTop(1)
 
@@ -64,18 +68,18 @@ func kindBadge(kind string) string {
 	switch kind {
 	case "mcp":
 		return lipgloss.NewStyle().
-			Foreground(clrPurple).Bold(true).
-			Background(lipgloss.Color("#2d1f4e")).
+			Foreground(clrGold).Bold(true).
+			Background(lipgloss.Color("#2A1C00")).
 			Padding(0, 1).Render("⚙ MCP")
 	case "skill":
 		return lipgloss.NewStyle().
-			Foreground(clrBlue).Bold(true).
-			Background(lipgloss.Color("#1a2a40")).
+			Foreground(clrNavy).Bold(true).
+			Background(lipgloss.Color("#0D1F3A")).
 			Padding(0, 1).Render("◆ SKILL")
 	case "cli":
 		return lipgloss.NewStyle().
-			Foreground(clrYellow).Bold(true).
-			Background(lipgloss.Color("#2a2010")).
+			Foreground(clrAmber).Bold(true).
+			Background(lipgloss.Color("#1E1200")).
 			Padding(0, 1).Render("▸ CLI")
 	default:
 		return styleMuted.Render(kind)
@@ -86,25 +90,24 @@ func networkBadge(network string) string {
 	if network == "local" {
 		return lipgloss.NewStyle().Foreground(clrGreen).Render("⬡ local")
 	}
-	return lipgloss.NewStyle().Foreground(clrOrange).Render("⬡ network")
+	return lipgloss.NewStyle().Foreground(clrAmber).Render("⬡ network")
 }
 
 func installBadge(count string) string {
 	if count == "" {
 		return ""
 	}
-	return lipgloss.NewStyle().Foreground(clrYellow).
-		Bold(true).Render("📦 " + count)
+	return lipgloss.NewStyle().Foreground(clrGold).Bold(true).Render("📦 " + count)
 }
 
 func riskBadge(risk string) string {
 	switch strings.ToLower(risk) {
 	case "critical":
-		return lipgloss.NewStyle().Foreground(clrRed).Render("🔴 critical")
+		return styleError.Render("🔴 critical")
 	case "safe":
-		return lipgloss.NewStyle().Foreground(clrGreen).Render("🟢 safe")
+		return styleSuccess.Render("🟢 safe")
 	case "none":
-		return lipgloss.NewStyle().Foreground(clrMuted).Render("○ none")
+		return styleMuted.Render("○ none")
 	default:
 		return ""
 	}
@@ -130,29 +133,33 @@ func checkBadge(ok bool) string {
 	return styleError.Render("✗")
 }
 
-// ── Formatted capability line (for huh option labels and non-TTY lists) ──
+// ── Capability line formatters ─────────────────────────────────────────────
 
-// capOptionLabel returns a single-line label for a capability,
-// used both in huh multi-select and the fallback text list.
+type capEntry struct {
+	Ref          string
+	Kind         string
+	Name         string
+	Network      string
+	Reason       string
+	InstallCount string
+}
+
 func capOptionLabel(cap capEntry) string {
 	badge := kindBadge(cap.Kind)
-	net := networkBadge(string(cap.Network))
-
-	// Name: trim long refs to keep it readable
-	name := cap.Name
-	if len(name) > 44 {
-		name = name[:41] + "…"
-	}
-	styledName := styleWhite.Width(44).Render(name)
-
-	suffix := net
+	name := styleWhite.Width(44).Render(func() string {
+		n := cap.Name
+		if len(n) > 44 {
+			return n[:41] + "…"
+		}
+		return n
+	}())
+	suffix := networkBadge(cap.Network)
 	if cap.InstallCount != "" {
 		suffix = installBadge(cap.InstallCount)
 	}
-	return fmt.Sprintf("%s  %s  %s", badge, styledName, suffix)
+	return fmt.Sprintf("%s  %s  %s", badge, name, suffix)
 }
 
-// capDetailLine returns the description line shown below the option label.
 func capDetailLine(reason string) string {
 	if reason == "" {
 		return ""
@@ -164,23 +171,13 @@ func capDetailLine(reason string) string {
 	return styleMuted.Render("        " + r)
 }
 
-// ── capEntry wraps both ProvisionableCapability fields + install count ────
-// (used by ui.go to avoid importing intelligence directly here,
-//  actual conversion happens in setup.go)
-
-type capEntry struct {
-	Ref          string
-	Kind         string
-	Name         string
-	Network      string
-	Reason       string
-	InstallCount string
-}
-
 // ── Shared print helpers ──────────────────────────────────────────────────
 
 func printHeader(title string) {
-	fmt.Println(styleHeader.Render("  ✦ Noevyra · " + title))
+	fmt.Println(styleHeader.Render(
+		lipgloss.NewStyle().Foreground(clrGoldDim).Render("  ☽ ✦  ") +
+			styleAccent.Render(title),
+	))
 }
 
 func printKeyValue(key, value string) {
@@ -193,4 +190,35 @@ func printSectionLabel(label string) {
 
 func printDivider() {
 	fmt.Println(styleMuted.Render(strings.Repeat("─", 60)))
+}
+
+// printBanner shows the Noevyra ASCII banner on TTY — used by brain init
+// and brain help to create a welcoming first impression.
+func printBanner() {
+	gold := lipgloss.NewStyle().Foreground(clrGold).Bold(true)
+	navy := lipgloss.NewStyle().Foreground(clrNavy)
+	dim := lipgloss.NewStyle().Foreground(clrGoldDim)
+	mute := styleMuted
+
+	fmt.Println()
+	fmt.Println(gold.Render("          ✦"))
+	fmt.Println(gold.Render("       ╭──────╮"))
+	fmt.Println(navy.Render("      ◟  ") + gold.Render("◕") + navy.Render("  ◞  ") + gold.Render("╭────────────────────────────────╮"))
+	fmt.Println(navy.Render("     ◟  ~~  ◞  ") + gold.Render("│  N  O  E  V  Y  R  A          │"))
+	fmt.Println(dim.Render("      ◟─────◞   ") + gold.Render("│  Intelligence that evolves.   │"))
+	fmt.Println(dim.Render("               ") + gold.Render("╰────────────────────────────────╯"))
+	fmt.Println(mute.Render("  ☽  Local · Private · Portable · MIT"))
+	fmt.Println()
+}
+
+// printSimpleBanner shows a single-line brand header for TTY commands.
+func printSimpleBanner() {
+	gold := lipgloss.NewStyle().Foreground(clrGold).Bold(true)
+	dim := lipgloss.NewStyle().Foreground(clrGoldDim)
+	mute := styleMuted
+	fmt.Printf("\n  %s %s  %s\n\n",
+		dim.Render("☽ ✦"),
+		gold.Render("NOEVYRA"),
+		mute.Render("Intelligence that evolves."),
+	)
 }

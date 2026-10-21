@@ -1,8 +1,6 @@
 <p align="center">
-  <img src="site/assets/noevyra-logo.jpg" alt="Noevyra" width="200">
+  <img src="assets/full-logo.png" alt="Noevyra — Intelligence That Evolves" width="480">
 </p>
-
-<h1 align="center">Noevyra</h1>
 
 <p align="center">
   <strong>One brain. Any agent. Zero re-setup.</strong><br>

@@ -109,6 +109,9 @@ func Run(args []string, version, commit, builtAt string, in io.Reader, out, errO
 	}
 	switch cmd {
 	case "help", "--help", "-h":
+		if isTTY() {
+			printBanner()
+		}
 		_, err := io.WriteString(out, help)
 		return err
 	case "version", "--version":
@@ -186,6 +189,9 @@ func Run(args []string, version, commit, builtAt string, in io.Reader, out, errO
 		}
 		if len(pos) > 0 {
 			return errors.New("init accepts only --schedule")
+		}
+		if isTTY() {
+			printBanner()
 		}
 		// Auto-seed the embedded AAS skills catalog on first init.
 		// Report in the JSON result (not as a bare stdout line) so smoke tests

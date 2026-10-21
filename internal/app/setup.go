@@ -60,7 +60,7 @@ func displayProfile(out io.Writer, profile intelligence.ProjectProfile) {
 		if len(profile.Signals) > 0 {
 			signals := make([]string, len(profile.Signals))
 			for i, s := range profile.Signals {
-				signals[i] = lipgloss.NewStyle().Foreground(clrPurple).Render(s)
+				signals[i] = lipgloss.NewStyle().Foreground(clrGold).Render(s)
 			}
 			printKeyValue("Signals", strings.Join(signals, "  "))
 		}
