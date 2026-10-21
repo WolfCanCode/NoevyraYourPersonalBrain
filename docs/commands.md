@@ -116,6 +116,39 @@ brain sources pause <id>
 
 ---
 
+## brain steer
+
+```sh
+brain steer [--global] [--dry-run]
+```
+
+Creates steering/rules files for every agent detected in `PATH`, instructing each one to use brain MCP tools automatically.
+
+| Flag | Effect |
+|---|---|
+| _(none)_ | Write files in the current project directory |
+| `--global` | Write to home-directory locations (applies to all projects) |
+| `--dry-run` | Preview what would be created without writing |
+
+**Files created per agent:**
+
+| Agent | Project | Global |
+|---|---|---|
+| Claude | `CLAUDE.md` | `~/.claude/CLAUDE.md` |
+| Codex | `AGENTS.md` | `~/.codex/AGENTS.md` |
+| Cursor | `.cursor/rules/brain.mdc` | `~/.cursor/rules/brain.mdc` |
+| Kiro | `.kiro/steering/brain.md` | `~/.kiro/steering/brain.md` |
+
+Each file tells the agent to:
+- Call `brain_recall` before starting tasks
+- Call `brain_remember` when decisions are confirmed
+- Call `brain_finish_task` when done
+
+If a file already contains `brain_recall` or `brain_remember`, it is skipped.
+Agents not found in PATH are skipped with a note.
+
+---
+
 ## brain update
 
 ```sh

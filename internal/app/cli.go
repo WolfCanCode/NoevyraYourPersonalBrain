@@ -53,6 +53,7 @@ var helpGroups = []struct {
 		{"brain sync [--sources|--skills]", "Local maintenance · optional source/skill refresh"},
 	}},
 	{"System", []helpEntry{
+		{"brain steer [--global] [--dry-run]", "Write brain auto-memory rules into every agent steering file"},
 		{"brain update [--check]", "Self-update from latest GitHub Release"},
 		{"brain mcp", "Start MCP server over stdio"},
 		{"brain mcp-config", "Print agent MCP configuration JSON"},
@@ -167,7 +168,7 @@ func Run(args []string, version, commit, builtAt string, in io.Reader, out, errO
 		}
 		return printJSON(out, v)
 	}
-	allowed := map[string]bool{"init": true, "remember": true, "recall": true, "context": true, "profile": true, "advise": true, "feedback": true, "sources": true, "approve": true, "status": true, "digest": true, "sync": true, "skills": true, "run": true, "doctor": true, "mcp": true, "setup": true, "update": true}
+	allowed := map[string]bool{"init": true, "remember": true, "recall": true, "context": true, "profile": true, "advise": true, "feedback": true, "sources": true, "approve": true, "status": true, "digest": true, "sync": true, "skills": true, "run": true, "doctor": true, "mcp": true, "setup": true, "update": true, "steer": true}
 	if !allowed[cmd] {
 		return fmt.Errorf("unknown command %q; run brain help", cmd)
 	}
@@ -177,6 +178,9 @@ func Run(args []string, version, commit, builtAt string, in io.Reader, out, errO
 	}
 	if cmd == "update" {
 		return runUpdate(version, args, out, errOut)
+	}
+	if cmd == "steer" {
+		return runSteer(args, out, errOut)
 	}
 	if cmd == "doctor" {
 		commands := map[string]bool{}
