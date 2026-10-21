@@ -9,7 +9,7 @@ import (
 )
 
 // Injected by release builds; local builds stay identifiable.
-var version = "0.5.2-dev"
+var version = "0.6.0-dev"
 var commit = "unknown"
 var builtAt = "unknown"
 
