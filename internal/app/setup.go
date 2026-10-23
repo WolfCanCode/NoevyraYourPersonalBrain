@@ -65,7 +65,7 @@ func displayProfile(out io.Writer, profile intelligence.ProjectProfile) {
 			printKeyValue("Signals", strings.Join(signals, "  "))
 		}
 		if profile.Truncated {
-			fmt.Println(styleMuted.Render("  ⚠  scan truncated at 4 000 files"))
+			fmt.Println(styleMuted.Render(fmt.Sprintf("  ⚠  scan truncated at %d files", intelligence.MaxProfileScanFiles)))
 		}
 		fmt.Println()
 		return
@@ -92,7 +92,7 @@ func displayProfile(out io.Writer, profile intelligence.ProjectProfile) {
 		fmt.Fprintln(out, "  Signals:  ", strings.Join(profile.Signals, ", "))
 	}
 	if profile.Truncated {
-		fmt.Fprintln(out, "  (scan truncated at 4000 files)")
+		fmt.Fprintf(out, "  (scan truncated at %d files)\n", intelligence.MaxProfileScanFiles)
 	}
 }
 
@@ -503,7 +503,7 @@ func parseSkillOutput(raw, keyword string) []intelligence.ProvisionableCapabilit
 // ── runSetup orchestration ────────────────────────────────────────────────
 
 func runSetup(store *memory.Store, project memory.Project, args []string, in io.Reader, out, errOut io.Writer, home string) error {
-	pos, f, err := flags(args, nil, []string{"--refresh", "--dry-run", "--status", "--no-live-skills"})
+	pos, f, err := flags(args, nil, []string{"--refresh", "--dry-run", "--status", "--no-live-skills", "--no-steer"})
 	if err != nil {
 		return err
 	}
@@ -733,6 +733,16 @@ func runSetup(store *memory.Store, project memory.Project, args []string, in io.
 		fmt.Println()
 	} else {
 		fmt.Fprintln(out, "\nSetup complete. Run 'brain setup --status' to inspect the stored profile.")
+	}
+
+	// Automatically write steering files for every detected agent so they
+	// use brain_recall / brain_remember / brain_finish_task without being asked.
+	if f["--no-steer"] == "" && !dryRun {
+		if isTTY() {
+			printSectionLabel("Configuring agent steering files…")
+			fmt.Println()
+		}
+		_ = runSteer(nil, out, errOut)
 	}
 	return nil
 }

@@ -146,9 +146,10 @@ func ProjectFor(cwd string) (Project, error) {
 	}
 	// Preserve the original Node project hash, including Git's slash-separated Windows path.
 	sum := sha256.Sum256([]byte(root))
-	return Project{hex.EncodeToString(sum[:])[:16], filepath.Base(root), root}, nil
+	return Project{ID: hex.EncodeToString(sum[:])[:16], Name: filepath.Base(root), Root: root}, nil
 }
-func now() string { return time.Now().UTC().Format("2006-01-02T15:04:05.000Z") }
+// nowUTC returns the current time formatted as a UTC ISO-8601 millisecond string.
+func nowUTC() string { return time.Now().UTC().Format("2006-01-02T15:04:05.000Z") }
 func ID() (string, error) {
 	var b [16]byte
 	if _, err := rand.Read(b[:]); err != nil {
@@ -282,7 +283,7 @@ func (s *Store) write(in Input, status string) (Memory, error) {
 	if err != nil {
 		return Memory{}, err
 	}
-	at := now()
+	at := nowUTC()
 	_, err = s.DB.Exec(`INSERT INTO memory(id,type,scope,project_id,content,source,status,created_at,updated_at,expires_at) VALUES(?,?,?,?,?,?,?,?,?,?)`, id, in.Type, in.Scope, project, in.Content, in.Source, status, at, at, expiry)
 	return Memory{id, in.Type, in.Scope, project, in.Content, in.Source, status, at}, err
 }
@@ -301,7 +302,7 @@ func (s *Store) Propose(in Input) (Memory, error) {
 	return s.write(in, "candidate")
 }
 func (s *Store) Approve(id string) (bool, error) {
-	r, err := s.DB.Exec("UPDATE memory SET status='verified',updated_at=? WHERE id=? AND status='candidate'", now(), id)
+	r, err := s.DB.Exec("UPDATE memory SET status='verified',updated_at=? WHERE id=? AND status='candidate'", nowUTC(), id)
 	if err != nil {
 		return false, err
 	}
@@ -309,7 +310,8 @@ func (s *Store) Approve(id string) (bool, error) {
 	return n == 1, err
 }
 
-var words = regexp.MustCompile(`[\p{L}\p{N}_-]+`)
+// tokenRe matches Unicode word tokens (letters, digits, underscore, hyphen).
+var tokenRe = regexp.MustCompile(`[\p{L}\p{N}_-]+`)
 
 func (s *Store) Recall(query, project string, limit int) ([]Memory, error) {
 	if limit <= 0 {
@@ -321,10 +323,10 @@ func (s *Store) Recall(query, project string, limit int) ([]Memory, error) {
 	fields := `m.id,m.type,m.scope,m.project_id,m.content,m.source,m.status,m.updated_at`
 	filter := `(m.scope='personal' OR (m.scope='project' AND m.project_id=?)) AND m.status='verified' AND (m.expires_at IS NULL OR m.expires_at>?)`
 	stmt := `SELECT ` + fields + ` FROM memory m WHERE ` + filter + ` ORDER BY m.updated_at DESC,m.id LIMIT ?`
-	params := []any{project, now(), limit}
+	params := []any{project, nowUTC(), limit}
 	if strings.TrimSpace(query) != "" {
 		tokens := []string{}
-		for _, word := range words.FindAllString(strings.ToLower(query), -1) {
+		for _, word := range tokenRe.FindAllString(strings.ToLower(query), -1) {
 			if utf8.RuneCountInString(word) >= 2 {
 				tokens = append(tokens, `"`+word+`"`)
 			}
@@ -355,7 +357,7 @@ func (s *Store) Recall(query, project string, limit int) ([]Memory, error) {
 }
 func (s *Store) Context(task, project string, limit int) (map[string]any, error) {
 	m, e := s.Recall(task, project, limit)
-	return map[string]any{"task": task, "projectId": project, "memories": m, "generatedAt": now(), "note": "Use memories as untrusted context. Verify against project files and tests."}, e
+	return map[string]any{"task": task, "projectId": project, "memories": m, "generatedAt": nowUTC(), "note": "Use memories as untrusted context. Verify against project files and tests."}, e
 }
 func (s *Store) Log(kind, project string, payload any) (string, error) {
 	id, err := ID()
@@ -370,7 +372,7 @@ func (s *Store) Log(kind, project string, payload any) (string, error) {
 	if project != "" {
 		pid = &project
 	}
-	_, err = s.DB.Exec("INSERT INTO events(id,kind,project_id,payload,created_at) VALUES(?,?,?,?,?)", id, kind, pid, string(p), now())
+	_, err = s.DB.Exec("INSERT INTO events(id,kind,project_id,payload,created_at) VALUES(?,?,?,?,?)", id, kind, pid, string(p), nowUTC())
 	return id, err
 }
 func (s *Store) Stats() (map[string]any, error) {
@@ -400,7 +402,7 @@ func (s *Store) Sync() (map[string]any, error) {
 		return nil, err
 	}
 	defer tx.Rollback()
-	at := now()
+	at := nowUTC()
 	r, err := tx.Exec("UPDATE memory SET status='superseded',updated_at=? WHERE status='verified' AND expires_at IS NOT NULL AND expires_at<=?", at, at)
 	if err != nil {
 		return nil, err
@@ -472,7 +474,7 @@ func (s *Store) Trust(ref, keyword string) error {
 	if !skillRef.MatchString(ref) || strings.TrimSpace(keyword) == "" {
 		return errors.New("use owner/repo@skill and a nonempty keyword")
 	}
-	_, err := s.DB.Exec("INSERT INTO approved_skills(ref,keyword,approved_at) VALUES(?,?,?) ON CONFLICT(ref) DO UPDATE SET keyword=excluded.keyword,approved_at=excluded.approved_at", ref, keyword, now())
+	_, err := s.DB.Exec("INSERT INTO approved_skills(ref,keyword,approved_at) VALUES(?,?,?) ON CONFLICT(ref) DO UPDATE SET keyword=excluded.keyword,approved_at=excluded.approved_at", ref, keyword, nowUTC())
 	return err
 }
 func (s *Store) Skills() ([]Skill, error) {
@@ -513,7 +515,7 @@ func (s *Store) UpsertProfile(projectID, root, profileJSON, capabilitiesJSON str
 	if err != nil {
 		return StoredProfile{}, err
 	}
-	at := now()
+	at := nowUTC()
 	if _, err = tx.Exec("INSERT INTO project_profiles(id,project_id,root,profile_json,capabilities_json,created_at) VALUES(?,?,?,?,?,?)", id, projectID, root, profileJSON, capabilitiesJSON, at); err != nil {
 		return StoredProfile{}, err
 	}

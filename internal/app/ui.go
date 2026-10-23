@@ -188,10 +188,6 @@ func printSectionLabel(label string) {
 	fmt.Println(styleSection.Render("  " + label))
 }
 
-func printDivider() {
-	fmt.Println(styleMuted.Render(strings.Repeat("─", 60)))
-}
-
 // printBanner shows the Noevyra brand banner on TTY — used by brain init
 // and brain help. Uses only universally-supported Unicode so it renders
 // cleanly in every terminal and font without misalignment.
@@ -213,16 +209,4 @@ func printBanner() {
 	fmt.Println(line)
 	fmt.Printf("  %s\n", mute.Render("Local · Private · Portable · MIT"))
 	fmt.Println()
-}
-
-// printSimpleBanner shows a single-line brand header for TTY commands.
-func printSimpleBanner() {
-	gold := lipgloss.NewStyle().Foreground(clrGold).Bold(true)
-	dim := lipgloss.NewStyle().Foreground(clrGoldDim)
-	mute := styleMuted
-	fmt.Printf("\n  %s %s  %s\n\n",
-		dim.Render("☽ ✦"),
-		gold.Render("NOEVYRA"),
-		mute.Render("Intelligence that evolves."),
-	)
 }

@@ -82,7 +82,7 @@ func renderHelp(out io.Writer) {
 		fmt.Fprintln(out)
 		return
 	}
-	// Plain text fallback
+	// Plain text fallback.
 	fmt.Fprintln(out, "Noevyra — intelligence that evolves")
 	fmt.Fprintln(out)
 	for _, g := range helpGroups {
@@ -100,6 +100,10 @@ func printJSON(out io.Writer, v any) error {
 	e.SetIndent("", "  ")
 	return e.Encode(v)
 }
+
+// flags parses a flat args slice into positional arguments and named flags.
+// values lists flags that consume the next token as their value (e.g. --budget 4).
+// booleans lists presence-only flags (e.g. --dry-run).
 func flags(args []string, values, booleans []string) ([]string, map[string]string, error) {
 	known := map[string]bool{}
 	for _, v := range values {
@@ -139,19 +143,29 @@ func flags(args []string, values, booleans []string) ([]string, map[string]strin
 	}
 	return pos, result, nil
 }
+
 func mcpConfig() (any, error) {
 	exe, err := os.Executable()
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"mcpServers": map[string]any{"brain": map[string]any{"command": exe, "args": []string{"mcp"}}}}, nil
+	return map[string]any{
+		"mcpServers": map[string]any{
+			"brain": map[string]any{"command": exe, "args": []string{"mcp"}},
+		},
+	}, nil
 }
+
+// Run is the top-level entry point for the brain CLI.
+// It dispatches to per-command handlers based on args[0].
 func Run(args []string, version, commit, builtAt string, in io.Reader, out, errOut io.Writer) error {
 	cmd := "help"
 	if len(args) > 0 {
 		cmd = args[0]
 		args = args[1:]
 	}
+
+	// Commands that do not require the memory store.
 	switch cmd {
 	case "help", "--help", "-h":
 		if isTTY() {
@@ -160,65 +174,50 @@ func Run(args []string, version, commit, builtAt string, in io.Reader, out, errO
 		renderHelp(out)
 		return nil
 	case "version", "--version":
-		return printJSON(out, map[string]any{"version": version, "commit": commit, "builtAt": builtAt, "go": runtime.Version(), "platform": runtime.GOOS + "/" + runtime.GOARCH})
+		return printJSON(out, map[string]any{
+			"version": version, "commit": commit, "builtAt": builtAt,
+			"go": runtime.Version(), "platform": runtime.GOOS + "/" + runtime.GOARCH,
+		})
 	case "mcp-config":
-		v, e := mcpConfig()
-		if e != nil {
-			return e
+		v, err := mcpConfig()
+		if err != nil {
+			return err
 		}
 		return printJSON(out, v)
 	}
-	allowed := map[string]bool{"init": true, "remember": true, "recall": true, "context": true, "profile": true, "advise": true, "feedback": true, "sources": true, "approve": true, "status": true, "digest": true, "sync": true, "skills": true, "run": true, "doctor": true, "mcp": true, "setup": true, "update": true, "steer": true}
+
+	allowed := map[string]bool{
+		"init": true, "remember": true, "recall": true, "context": true,
+		"profile": true, "advise": true, "feedback": true, "sources": true,
+		"approve": true, "status": true, "digest": true, "sync": true,
+		"skills": true, "run": true, "doctor": true, "mcp": true,
+		"setup": true, "update": true, "steer": true,
+	}
 	if !allowed[cmd] {
 		return fmt.Errorf("unknown command %q; run brain help", cmd)
 	}
+
 	home, err := memory.Home()
 	if err != nil {
 		return err
 	}
-	if cmd == "update" {
+
+	// Commands that need home but not the store.
+	switch cmd {
+	case "update":
 		return runUpdate(version, args, out, errOut)
-	}
-	if cmd == "steer" {
+	case "steer":
 		return runSteer(args, out, errOut)
+	case "doctor":
+		return runDoctorCmd(version, home, out)
 	}
-	if cmd == "doctor" {
-		commands := map[string]bool{}
-		for _, bin := range []string{"git", "claude", "codex", "cursor-agent", "kiro", "opencode", "pi", "npx"} {
-			_, e := exec.LookPath(bin)
-			commands[bin] = e == nil
-		}
-		if isTTY() {
-			printHeader("brain doctor")
-			fmt.Println()
-			printKeyValue("Version", styleAccent.Render(version))
-			printKeyValue("Platform", styleMuted.Render(runtime.GOOS+"/"+runtime.GOARCH))
-			printKeyValue("Go", styleMuted.Render(runtime.Version()))
-			printKeyValue("Store", styleMuted.Render(home))
-			fmt.Println()
-			printSectionLabel("Tools")
-			fmt.Println()
-			for _, bin := range []string{"git", "claude", "codex", "cursor-agent", "kiro", "opencode", "pi", "npx"} {
-				ok := commands[bin]
-				fmt.Printf("  %s  %s\n", checkBadge(ok), styleWhite.Render(bin))
-			}
-			fmt.Println()
-			printSectionLabel("Scheduler")
-			fmt.Println()
-			schStatus := schedulerStatus()
-			if active, ok := schStatus["active"].(bool); ok {
-				fmt.Printf("  %s  daily sync\n", checkBadge(active))
-			}
-			fmt.Println()
-			return nil
-		}
-		return printJSON(out, map[string]any{"version": version, "go": runtime.Version(), "platform": runtime.GOOS, "store": home, "commands": commands, "scheduler": schedulerStatus()})
-	}
+
 	store, err := memory.Open(home)
 	if err != nil {
 		return err
 	}
 	defer store.Close()
+
 	cwd, err := os.Getwd()
 	if err != nil {
 		return err
@@ -227,190 +226,33 @@ func Run(args []string, version, commit, builtAt string, in io.Reader, out, errO
 	if err != nil {
 		return err
 	}
+
+	// Commands that require the store.
 	switch cmd {
 	case "mcp":
 		return ServeMCP(store, project, version, in, out)
 	case "init":
-		pos, f, e := flags(args, nil, []string{"--schedule"})
-		if e != nil {
-			return e
-		}
-		if len(pos) > 0 {
-			return errors.New("init accepts only --schedule")
-		}
-		if isTTY() {
-			printBanner()
-		}
-		// Auto-seed the embedded AAS skills catalog on first init.
-		// Report in the JSON result (not as a bare stdout line) so smoke tests
-		// and MCP clients can still JSON.parse the init output cleanly.
-		catalogSeeded := 0
-		if n, seedErr := intelligence.SeedEmbeddedCatalog(store); seedErr != nil {
-			fmt.Fprintf(errOut, "brain: catalog seed: %v\n", seedErr)
-		} else {
-			catalogSeeded = n
-		}
-		result := map[string]any{"database": store.Path, "scheduler": schedulerStatus()}
-		if catalogSeeded > 0 {
-			result["catalogSeeded"] = catalogSeeded
-		}
-		if f["--schedule"] != "" {
-			v, e := installScheduler(home)
-			if e != nil {
-				return e
-			}
-			result["scheduler"] = v
-		}
-		conf, e := mcpConfig()
-		if e != nil {
-			return e
-		}
-		result["mcp"] = conf
-		return printJSON(out, result)
+		return runInitCmd(store, args, home, out, errOut)
 	case "remember":
-		pos, f, e := flags(args, []string{"--scope", "--type"}, nil)
-		if e != nil {
-			return e
-		}
-		v, e := store.Remember(memory.Input{Content: strings.Join(pos, " "), Scope: f["--scope"], Type: f["--type"], ProjectID: project.ID})
-		if e != nil {
-			return e
-		}
-		return printJSON(out, v)
+		return runRememberCmd(store, project, args, out)
 	case "recall", "context":
-		pos, _, e := flags(args, nil, nil)
-		if e != nil {
-			return e
-		}
-		q := strings.Join(pos, " ")
-		var v any
-		if cmd == "recall" {
-			v, e = store.Recall(q, project.ID, 8)
-		} else {
-			v, e = store.Context(q, project.ID, 8)
-		}
-		if e != nil {
-			return e
-		}
-		return printJSON(out, v)
+		return runQueryCmd(cmd, store, project, args, out)
 	case "profile":
-		if len(args) != 0 {
-			return errors.New("profile accepts no arguments")
-		}
-		v, e := intelligence.Profile(project.Root)
-		if e != nil {
-			return e
-		}
-		return printJSON(out, v)
+		return runProfileCmd(project, args, out)
 	case "advise":
-		pos, f, e := flags(args, []string{"--budget"}, nil)
-		if e != nil {
-			return e
-		}
-		budget := 0
-		if f["--budget"] != "" {
-			budget, e = strconv.Atoi(f["--budget"])
-			if e != nil {
-				return errors.New("budget must be an integer")
-			}
-		}
-		v, e := intelligence.Compile(store, project, strings.Join(pos, " "), budget)
-		if e != nil {
-			return e
-		}
-		return printJSON(out, v)
+		return runAdviseCmd(store, project, args, out)
 	case "feedback":
-		pos, f, e := flags(args, []string{"--outcome", "--tokens", "--notes"}, nil)
-		if e != nil {
-			return e
-		}
-		if len(pos) != 1 {
-			return errors.New("feedback requires one context pack ID")
-		}
-		tokens := 0
-		if f["--tokens"] != "" {
-			tokens, e = strconv.Atoi(f["--tokens"])
-			if e != nil {
-				return errors.New("tokens must be an integer")
-			}
-		}
-		v, e := intelligence.Feedback(store, pos[0], f["--outcome"], tokens, f["--notes"])
-		if e != nil {
-			return e
-		}
-		return printJSON(out, v)
+		return runFeedbackCmd(store, args, out)
 	case "sources":
 		return sources(store, args, out)
 	case "approve":
-		if len(args) != 1 {
-			return errors.New("approve requires one memory ID")
-		}
-		ok, e := store.Approve(args[0])
-		if e != nil {
-			return e
-		}
-		if !ok {
-			return errors.New("candidate memory not found")
-		}
-		return printJSON(out, map[string]any{"approved": args[0]})
+		return runApproveCmd(store, args, out)
 	case "status":
-		v, e := store.Stats()
-		if e != nil {
-			return e
-		}
-		v["project"] = project
-		v["scheduler"] = schedulerStatus()
-		if count, countErr := intelligence.KnowledgeCount(store); countErr == nil {
-			v["activeKnowledge"] = count
-		}
-		return printJSON(out, v)
+		return runStatusCmd(store, project, out)
 	case "digest":
-		pos, f, e := flags(args, []string{"--days"}, nil)
-		if e != nil {
-			return e
-		}
-		if len(pos) > 0 {
-			return errors.New("digest accepts only --days")
-		}
-		days := 1
-		if f["--days"] != "" {
-			days, e = strconv.Atoi(f["--days"])
-			if e != nil {
-				return errors.New("days must be an integer")
-			}
-		}
-		v, e := store.Digest(days)
-		if e != nil {
-			return e
-		}
-		return printJSON(out, v)
+		return runDigestCmd(store, args, out)
 	case "sync":
-		pos, f, e := flags(args, nil, []string{"--sources", "--skills", "--online"})
-		if e != nil {
-			return e
-		}
-		if len(pos) > 0 {
-			return errors.New("sync accepts only --sources, --skills or --online")
-		}
-		v, e := store.Sync()
-		if e != nil {
-			return e
-		}
-		if f["--sources"] != "" || f["--online"] != "" {
-			sources, sourceErr := intelligence.SyncSources(context.Background(), store)
-			v["sources"] = sources
-			if sourceErr != nil {
-				v["sourceError"] = sourceErr.Error()
-			}
-		}
-		if f["--skills"] != "" || f["--online"] != "" {
-			r, e := external("npx", []string{"--yes", "skills", "check"})
-			v["skillCheck"] = map[string]any{"ok": e == nil, "output": r}
-			if e != nil {
-				v["skillCheckError"] = e.Error()
-			}
-		}
-		return printJSON(out, v)
+		return runSyncCmd(store, args, out)
 	case "skills":
 		return skills(store, args, out)
 	case "run":
@@ -420,6 +262,269 @@ func Run(args []string, version, commit, builtAt string, in io.Reader, out, errO
 	}
 	return errors.New("unhandled command")
 }
+
+// ── Subcommand handlers ────────────────────────────────────────────────────
+
+// runDoctorCmd checks prerequisites, binary availability, and scheduler state.
+func runDoctorCmd(version, home string, out io.Writer) error {
+	checkedBins := []string{"git", "claude", "codex", "cursor-agent", "kiro", "opencode", "pi", "npx"}
+	commands := make(map[string]bool, len(checkedBins))
+	for _, bin := range checkedBins {
+		_, e := exec.LookPath(bin)
+		commands[bin] = e == nil
+	}
+	if isTTY() {
+		printHeader("brain doctor")
+		fmt.Println()
+		printKeyValue("Version", styleAccent.Render(version))
+		printKeyValue("Platform", styleMuted.Render(runtime.GOOS+"/"+runtime.GOARCH))
+		printKeyValue("Go", styleMuted.Render(runtime.Version()))
+		printKeyValue("Store", styleMuted.Render(home))
+		fmt.Println()
+		printSectionLabel("Tools")
+		fmt.Println()
+		for _, bin := range checkedBins {
+			fmt.Printf("  %s  %s\n", checkBadge(commands[bin]), styleWhite.Render(bin))
+		}
+		fmt.Println()
+		printSectionLabel("Scheduler")
+		fmt.Println()
+		schStatus := schedulerStatus()
+		if active, ok := schStatus["active"].(bool); ok {
+			fmt.Printf("  %s  daily sync\n", checkBadge(active))
+		}
+		fmt.Println()
+		return nil
+	}
+	return printJSON(out, map[string]any{
+		"version":   version,
+		"go":        runtime.Version(),
+		"platform":  runtime.GOOS,
+		"store":     home,
+		"commands":  commands,
+		"scheduler": schedulerStatus(),
+	})
+}
+
+// runInitCmd initialises (or re-initialises) the memory store.
+func runInitCmd(store *memory.Store, args []string, home string, out, errOut io.Writer) error {
+	pos, f, err := flags(args, nil, []string{"--schedule"})
+	if err != nil {
+		return err
+	}
+	if len(pos) > 0 {
+		return errors.New("init accepts only --schedule")
+	}
+	if isTTY() {
+		printBanner()
+	}
+	// Auto-seed the embedded AAS skills catalog on first init.
+	// Report in the JSON result (not as bare stdout) so smoke tests
+	// and MCP clients can still JSON.parse the init output cleanly.
+	catalogSeeded := 0
+	if n, seedErr := intelligence.SeedEmbeddedCatalog(store); seedErr != nil {
+		fmt.Fprintf(errOut, "brain: catalog seed: %v\n", seedErr)
+	} else {
+		catalogSeeded = n
+	}
+	result := map[string]any{
+		"database":  store.Path,
+		"scheduler": schedulerStatus(),
+	}
+	if catalogSeeded > 0 {
+		result["catalogSeeded"] = catalogSeeded
+	}
+	if f["--schedule"] != "" {
+		v, e := installScheduler(home)
+		if e != nil {
+			return e
+		}
+		result["scheduler"] = v
+	}
+	conf, err := mcpConfig()
+	if err != nil {
+		return err
+	}
+	result["mcp"] = conf
+	return printJSON(out, result)
+}
+
+// runRememberCmd stores a verified project memory.
+func runRememberCmd(store *memory.Store, project memory.Project, args []string, out io.Writer) error {
+	pos, f, err := flags(args, []string{"--scope", "--type"}, nil)
+	if err != nil {
+		return err
+	}
+	v, err := store.Remember(memory.Input{
+		Content:   strings.Join(pos, " "),
+		Scope:     f["--scope"],
+		Type:      f["--type"],
+		ProjectID: project.ID,
+	})
+	if err != nil {
+		return err
+	}
+	return printJSON(out, v)
+}
+
+// runQueryCmd handles both "recall" and "context" with a shared flag set.
+func runQueryCmd(cmd string, store *memory.Store, project memory.Project, args []string, out io.Writer) error {
+	pos, _, err := flags(args, nil, nil)
+	if err != nil {
+		return err
+	}
+	q := strings.Join(pos, " ")
+	var v any
+	if cmd == "recall" {
+		v, err = store.Recall(q, project.ID, 8)
+	} else {
+		v, err = store.Context(q, project.ID, 8)
+	}
+	if err != nil {
+		return err
+	}
+	return printJSON(out, v)
+}
+
+// runProfileCmd detects and prints the project stack profile.
+// It rejects any positional arguments since the profile command takes none.
+func runProfileCmd(project memory.Project, args []string, out io.Writer) error {
+	if len(args) != 0 {
+		return errors.New("profile accepts no arguments")
+	}
+	v, err := intelligence.Profile(project.Root)
+	if err != nil {
+		return err
+	}
+	return printJSON(out, v)
+}
+
+// runAdviseCmd compiles a full intelligence pack for a task.
+func runAdviseCmd(store *memory.Store, project memory.Project, args []string, out io.Writer) error {
+	pos, f, err := flags(args, []string{"--budget"}, nil)
+	if err != nil {
+		return err
+	}
+	budget := 0
+	if f["--budget"] != "" {
+		budget, err = strconv.Atoi(f["--budget"])
+		if err != nil {
+			return errors.New("budget must be an integer")
+		}
+	}
+	v, err := intelligence.Compile(store, project, strings.Join(pos, " "), budget)
+	if err != nil {
+		return err
+	}
+	return printJSON(out, v)
+}
+
+// runFeedbackCmd records whether a context pack was useful.
+func runFeedbackCmd(store *memory.Store, args []string, out io.Writer) error {
+	pos, f, err := flags(args, []string{"--outcome", "--tokens", "--notes"}, nil)
+	if err != nil {
+		return err
+	}
+	if len(pos) != 1 {
+		return errors.New("feedback requires one context pack ID")
+	}
+	tokens := 0
+	if f["--tokens"] != "" {
+		tokens, err = strconv.Atoi(f["--tokens"])
+		if err != nil {
+			return errors.New("tokens must be an integer")
+		}
+	}
+	v, err := intelligence.Feedback(store, pos[0], f["--outcome"], tokens, f["--notes"])
+	if err != nil {
+		return err
+	}
+	return printJSON(out, v)
+}
+
+// runApproveCmd promotes a candidate memory to verified.
+func runApproveCmd(store *memory.Store, args []string, out io.Writer) error {
+	if len(args) != 1 {
+		return errors.New("approve requires one memory ID")
+	}
+	ok, err := store.Approve(args[0])
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return errors.New("candidate memory not found")
+	}
+	return printJSON(out, map[string]any{"approved": args[0]})
+}
+
+// runStatusCmd prints memory counts, scheduler state, and active knowledge.
+func runStatusCmd(store *memory.Store, project memory.Project, out io.Writer) error {
+	v, err := store.Stats()
+	if err != nil {
+		return err
+	}
+	v["project"] = project
+	v["scheduler"] = schedulerStatus()
+	if count, countErr := intelligence.KnowledgeCount(store); countErr == nil {
+		v["activeKnowledge"] = count
+	}
+	return printJSON(out, v)
+}
+
+// runDigestCmd prints recent memories and events.
+func runDigestCmd(store *memory.Store, args []string, out io.Writer) error {
+	pos, f, err := flags(args, []string{"--days"}, nil)
+	if err != nil {
+		return err
+	}
+	if len(pos) > 0 {
+		return errors.New("digest accepts only --days")
+	}
+	days := 1
+	if f["--days"] != "" {
+		days, err = strconv.Atoi(f["--days"])
+		if err != nil {
+			return errors.New("days must be an integer")
+		}
+	}
+	v, err := store.Digest(days)
+	if err != nil {
+		return err
+	}
+	return printJSON(out, v)
+}
+
+// runSyncCmd runs local maintenance and optionally syncs sources and skills.
+func runSyncCmd(store *memory.Store, args []string, out io.Writer) error {
+	pos, f, err := flags(args, nil, []string{"--sources", "--skills", "--online"})
+	if err != nil {
+		return err
+	}
+	if len(pos) > 0 {
+		return errors.New("sync accepts only --sources, --skills or --online")
+	}
+	v, err := store.Sync()
+	if err != nil {
+		return err
+	}
+	if f["--sources"] != "" || f["--online"] != "" {
+		srcs, sourceErr := intelligence.SyncSources(context.Background(), store)
+		v["sources"] = srcs
+		if sourceErr != nil {
+			v["sourceError"] = sourceErr.Error()
+		}
+	}
+	if f["--skills"] != "" || f["--online"] != "" {
+		r, e := external("npx", []string{"--yes", "skills", "check"})
+		v["skillCheck"] = map[string]any{"ok": e == nil, "output": r}
+		if e != nil {
+			v["skillCheckError"] = e.Error()
+		}
+	}
+	return printJSON(out, v)
+}
+
+// ── sources subcommand ─────────────────────────────────────────────────────
 
 func sources(store *memory.Store, args []string, out io.Writer) error {
 	if len(args) == 0 {
@@ -484,12 +589,17 @@ func sources(store *memory.Store, args []string, out io.Writer) error {
 	return errors.New("use sources seed|add|list|sync|pause")
 }
 
-// Bound subprocess output and duration; no shell interpolation of user content.
+// ── external subprocess helper ─────────────────────────────────────────────
+
+// maxExternalOutput caps subprocess output to avoid flooding the terminal or memory.
+const maxExternalOutput = 64_000
+
+// limitedBuffer is a bytes.Buffer capped at maxExternalOutput bytes.
 type limitedBuffer struct{ bytes.Buffer }
 
 func (b *limitedBuffer) Write(p []byte) (int, error) {
 	n := len(p)
-	remaining := 64000 - b.Len()
+	remaining := maxExternalOutput - b.Len()
 	if remaining > 0 {
 		if len(p) > remaining {
 			p = p[:remaining]
@@ -498,6 +608,9 @@ func (b *limitedBuffer) Write(p []byte) (int, error) {
 	}
 	return n, nil
 }
+
+// external runs bin with args, caps combined stdout+stderr, and enforces a timeout.
+// No shell interpolation — args are passed directly to exec.
 func external(bin string, args []string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
@@ -508,6 +621,9 @@ func external(bin string, args []string) (string, error) {
 	err := cmd.Run()
 	return buf.String(), err
 }
+
+// ── skills subcommand ──────────────────────────────────────────────────────
+
 func skills(s *memory.Store, args []string, out io.Writer) error {
 	if len(args) == 0 {
 		return errors.New("use skills find|trust|list")
@@ -516,89 +632,100 @@ func skills(s *memory.Store, args []string, out io.Writer) error {
 	args = args[1:]
 	switch sub {
 	case "list":
-		v, e := s.Skills()
-		if e != nil {
-			return e
+		v, err := s.Skills()
+		if err != nil {
+			return err
 		}
 		return printJSON(out, v)
 	case "trust":
-		pos, f, e := flags(args, []string{"--keyword"}, nil)
-		if e != nil {
-			return e
+		pos, f, err := flags(args, []string{"--keyword"}, nil)
+		if err != nil {
+			return err
 		}
 		if len(pos) != 1 {
 			return errors.New("skill reference required")
 		}
-		if e = s.Trust(pos[0], f["--keyword"]); e != nil {
-			return e
+		if err = s.Trust(pos[0], f["--keyword"]); err != nil {
+			return err
 		}
 		return printJSON(out, map[string]any{"trusted": pos[0], "keyword": f["--keyword"]})
 	case "find":
 		if len(args) == 0 {
 			return errors.New("search term required")
 		}
-		query := strings.Join(args, " ")
-		// Silently seed from embedded catalog if not yet populated.
-		_, _ = intelligence.SeedEmbeddedCatalog(s)
-		seeded, seedErr := intelligence.CatalogSeeded(s)
-		if seedErr == nil && seeded {
-			caps, searchErr := intelligence.SearchSkillsCatalog(s, query, 10)
-			if searchErr != nil {
-				return fmt.Errorf("catalog search: %w", searchErr)
-			}
-			if len(caps) == 0 {
-				if isTTY() {
-					fmt.Println(styleMuted.Render("  No skills matched " + query + " in the local catalog."))
-				} else {
-					_, e := fmt.Fprintf(out, "No skills matched %q in the local catalog.\n", query)
-					return e
-				}
-				return nil
-			}
-			if isTTY() {
-				printHeader("brain skills find · " + query)
-				fmt.Println()
-				for i, c := range caps {
-					e := capEntry{Ref: c.Ref, Kind: c.Kind, Name: c.Name, Network: string(c.Network), Reason: c.Reason, InstallCount: c.InstallCount}
-					fmt.Printf("  %2d. %s\n%s\n\n", i+1, capOptionLabel(e), capDetailLine(c.Reason))
-				}
-				fmt.Println(styleMuted.Render("  Use 'brain skills trust <ref> --keyword <term>' to approve."))
-				fmt.Println()
-			} else {
-				fmt.Fprintf(out, "Top %d skills matching %q:\n\n", len(caps), query)
-				for i, c := range caps {
-					fmt.Fprintf(out, "  %2d. %s\n      %s\n\n", i+1, c.Ref, c.Reason)
-				}
-				fmt.Fprintf(out, "Use 'brain skills trust <ref> --keyword <term>' to approve a skill.\n")
-			}
-			return nil
-		}
-		// Catalog not yet seeded — fall back to npx and cap at 10 results.
-		fmt.Fprintln(out, "Local AAS catalog not found. Run 'brain sources seed && brain sources sync' to enable fast offline search.")
-		fmt.Fprintln(out, "Falling back to npx…")
-		r, e := external("npx", []string{"--yes", "skills", "find", query})
-		if e != nil {
-			return fmt.Errorf("skills discovery: %w: %s", e, r)
-		}
-		// Print only first 10 non-empty lines to avoid flooding the terminal.
-		lines, shown := strings.Split(r, "\n"), 0
-		for _, line := range lines {
-			if strings.TrimSpace(line) == "" {
-				continue
-			}
-			if shown >= 10 {
-				fmt.Fprintln(out, "  … (use local catalog for full results)")
-				break
-			}
-			fmt.Fprintln(out, " ", line)
-			shown++
-		}
-		return nil
+		return findSkills(s, args, out)
 	}
 	return errors.New("use skills find|trust|list")
 }
+
+// findSkills searches the local AAS catalog, falling back to npx.
+func findSkills(s *memory.Store, args []string, out io.Writer) error {
+	query := strings.Join(args, " ")
+	// Silently seed from embedded catalog if not yet populated.
+	_, _ = intelligence.SeedEmbeddedCatalog(s)
+	seeded, seedErr := intelligence.CatalogSeeded(s)
+	if seedErr == nil && seeded {
+		caps, searchErr := intelligence.SearchSkillsCatalog(s, query, 10)
+		if searchErr != nil {
+			return fmt.Errorf("catalog search: %w", searchErr)
+		}
+		if len(caps) == 0 {
+			if isTTY() {
+				fmt.Println(styleMuted.Render("  No skills matched " + query + " in the local catalog."))
+			} else {
+				_, e := fmt.Fprintf(out, "No skills matched %q in the local catalog.\n", query)
+				return e
+			}
+			return nil
+		}
+		if isTTY() {
+			printHeader("brain skills find · " + query)
+			fmt.Println()
+			for i, c := range caps {
+				e := capEntry{Ref: c.Ref, Kind: c.Kind, Name: c.Name, Network: string(c.Network), Reason: c.Reason, InstallCount: c.InstallCount}
+				fmt.Printf("  %2d. %s\n%s\n\n", i+1, capOptionLabel(e), capDetailLine(c.Reason))
+			}
+			fmt.Println(styleMuted.Render("  Use 'brain skills trust <ref> --keyword <term>' to approve."))
+			fmt.Println()
+		} else {
+			fmt.Fprintf(out, "Top %d skills matching %q:\n\n", len(caps), query)
+			for i, c := range caps {
+				fmt.Fprintf(out, "  %2d. %s\n      %s\n\n", i+1, c.Ref, c.Reason)
+			}
+			fmt.Fprintf(out, "Use 'brain skills trust <ref> --keyword <term>' to approve a skill.\n")
+		}
+		return nil
+	}
+	// Catalog not yet seeded — fall back to npx and cap at 10 results.
+	fmt.Fprintln(out, "Local AAS catalog not found. Run 'brain sources seed && brain sources sync' to enable fast offline search.")
+	fmt.Fprintln(out, "Falling back to npx…")
+	r, err := external("npx", []string{"--yes", "skills", "find", query})
+	if err != nil {
+		return fmt.Errorf("skills discovery: %w: %s", err, r)
+	}
+	// Print only first 10 non-empty lines to avoid flooding the terminal.
+	lines, shown := strings.Split(r, "\n"), 0
+	for _, line := range lines {
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+		if shown >= 10 {
+			fmt.Fprintln(out, "  … (use local catalog for full results)")
+			break
+		}
+		fmt.Fprintln(out, " ", line)
+		shown++
+	}
+	return nil
+}
+
+// ── run agent ─────────────────────────────────────────────────────────────
+
 func runAgent(s *memory.Store, p memory.Project, args []string, in io.Reader, out, errOut io.Writer, home string) error {
-	binaries := map[string]string{"claude": "claude", "codex": "codex", "cursor": "cursor-agent", "kiro": "kiro", "opencode": "opencode", "pi": "pi"}
+	binaries := map[string]string{
+		"claude": "claude", "codex": "codex", "cursor": "cursor-agent",
+		"kiro": "kiro", "opencode": "opencode", "pi": "pi",
+	}
 	if len(args) == 0 || binaries[args[0]] == "" {
 		return errors.New("use brain run claude|codex|cursor|kiro|opencode|pi [task]")
 	}
@@ -643,7 +770,10 @@ func runAgent(s *memory.Store, p memory.Project, args []string, in io.Reader, ou
 	}
 	defer os.RemoveAll(dir)
 	file := filepath.Join(dir, "context.md")
-	body, err := json.MarshalIndent(map[string]any{"context": pack, "approvedSkillInstructions": skillText}, "", "  ")
+	body, err := json.MarshalIndent(map[string]any{
+		"context":                  pack,
+		"approvedSkillInstructions": skillText,
+	}, "", "  ")
 	if err != nil {
 		return err
 	}

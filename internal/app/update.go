@@ -188,7 +188,7 @@ func installUpdate(tag string, out io.Writer) error {
 		return fmt.Errorf("%s not found in %s", binName, assetName)
 	}
 
-	return replaceBinary(binData, out)
+	return replaceBinary(binData, tag, out)
 }
 
 func fetchBody(client *http.Client, url string) ([]byte, error) {
@@ -263,7 +263,7 @@ func extractFromZip(data []byte, target string) ([]byte, error) {
 // executable, sets permissions, then atomically renames it into place.
 // On Windows, where renaming over a running executable fails, it first moves the
 // current binary to a .old file before placing the new one.
-func replaceBinary(data []byte, out io.Writer) error {
+func replaceBinary(data []byte, tag string, out io.Writer) error {
 	exe, err := os.Executable()
 	if err != nil {
 		return fmt.Errorf("locate current executable: %w", err)
@@ -315,6 +315,6 @@ func replaceBinary(data []byte, out io.Writer) error {
 		return fmt.Errorf("install new binary: %w", err)
 	}
 
-	fmt.Fprintf(out, "Updated Noevyra to %s at %s\nRestart any running 'brain mcp' processes to use the new version.\n", exe, exe)
+	fmt.Fprintf(out, "Updated Noevyra to %s at %s\nRestart any running 'brain mcp' processes to use the new version.\n", tag, exe)
 	return nil
 }

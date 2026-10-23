@@ -3,9 +3,10 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/WolfCanCode/personal-ai-brain/internal/app"
 	"os"
 	"os/exec"
+
+	"github.com/WolfCanCode/personal-ai-brain/internal/app"
 )
 
 // Injected by release builds; local builds stay identifiable.

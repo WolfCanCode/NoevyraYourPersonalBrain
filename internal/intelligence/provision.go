@@ -309,14 +309,38 @@ func provisionCLI(cap ProvisionableCapability, dryRun bool) ProvisionResult {
 	return ProvisionResult{Capability: cap, Outcome: OutcomeProvisioned}
 }
 
+// atomicWriteJSON writes data to path using a temp-file-then-rename pattern.
+// This is atomic on POSIX and best-effort atomic on Windows.
+// Parent directories are created as needed.
+func atomicWriteJSON(path string, data []byte) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+		return err
+	}
+	tmp, err := os.CreateTemp(filepath.Dir(path), ".brain-mcp-*.tmp")
+	if err != nil {
+		return err
+	}
+	tmpName := tmp.Name()
+	defer func() {
+		if _, e := os.Stat(tmpName); e == nil {
+			os.Remove(tmpName)
+		}
+	}()
+	if _, err = tmp.Write(append(data, '\n')); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err = tmp.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmpName, path)
+}
+
 // writeMCPEntry atomically merges entry under serverName into the mcpServers object
 // of the JSON file at path, creating the file and any missing parent directories.
 // Preserves all other top-level keys. Idempotent — calling N times yields the same
 // result as calling once (Req 4.6).
 func writeMCPEntry(path, serverName string, entry MCPServerDef) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
-		return err
-	}
 	top := map[string]json.RawMessage{}
 	if data, err := os.ReadFile(path); err == nil && len(data) > 0 {
 		_ = json.Unmarshal(data, &top)
@@ -339,24 +363,7 @@ func writeMCPEntry(path, serverName string, entry MCPServerDef) error {
 	if err != nil {
 		return err
 	}
-	tmp, err := os.CreateTemp(filepath.Dir(path), ".brain-mcp-*.tmp")
-	if err != nil {
-		return err
-	}
-	tmpName := tmp.Name()
-	defer func() {
-		if _, statErr := os.Stat(tmpName); statErr == nil {
-			os.Remove(tmpName)
-		}
-	}()
-	if _, err = tmp.Write(append(out, '\n')); err != nil {
-		tmp.Close()
-		return err
-	}
-	if err = tmp.Close(); err != nil {
-		return err
-	}
-	return os.Rename(tmpName, path)
+	return atomicWriteJSON(path, out)
 }
 
 // WriteMCPEntry is the exported variant used by tests.
@@ -367,9 +374,6 @@ func WriteMCPEntry(path, serverName string, entry MCPServerDef) error {
 // writeOpenCodeMCPEntry writes into the opencode.json "mcp" envelope,
 // which uses {"type":"local","command":[...]} instead of {"command":"...","args":[...]}.
 func writeOpenCodeMCPEntry(path, serverName string, entry MCPServerDef) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
-		return err
-	}
 	top := map[string]json.RawMessage{}
 	if data, err := os.ReadFile(path); err == nil && len(data) > 0 {
 		_ = json.Unmarshal(data, &top)
@@ -403,22 +407,5 @@ func writeOpenCodeMCPEntry(path, serverName string, entry MCPServerDef) error {
 	if err != nil {
 		return err
 	}
-	tmp, err := os.CreateTemp(filepath.Dir(path), ".brain-mcp-*.tmp")
-	if err != nil {
-		return err
-	}
-	tmpName := tmp.Name()
-	defer func() {
-		if _, e := os.Stat(tmpName); e == nil {
-			os.Remove(tmpName)
-		}
-	}()
-	if _, err = tmp.Write(append(out, '\n')); err != nil {
-		tmp.Close()
-		return err
-	}
-	if err = tmp.Close(); err != nil {
-		return err
-	}
-	return os.Rename(tmpName, path)
+	return atomicWriteJSON(path, out)
 }

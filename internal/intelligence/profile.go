@@ -157,6 +157,10 @@ var nodeFrameworks = []struct {
 	{"tailwind", []string{"tailwindcss"}},
 }
 
+// MaxProfileScanFiles is the upper bound on files examined during profile detection.
+// This caps CPU and I/O cost on very large repositories.
+const MaxProfileScanFiles = 4_000
+
 // Profile reads bounded repository metadata. Project contents are signals, not instructions.
 func Profile(root string) (ProjectProfile, error) {
 	root, err := filepath.Abs(root)
@@ -182,7 +186,7 @@ func Profile(root string) (ProjectProfile, error) {
 			}
 			return nil
 		}
-		if profile.Scanned >= 4000 {
+		if profile.Scanned >= MaxProfileScanFiles {
 			profile.Truncated = true
 			return fs.SkipAll
 		}
