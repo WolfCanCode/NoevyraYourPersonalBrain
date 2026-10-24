@@ -3,7 +3,6 @@ package app
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 )
@@ -35,7 +34,6 @@ var (
 // ── Base styles ────────────────────────────────────────────────────────────
 
 var (
-	styleBold    = lipgloss.NewStyle().Bold(true)
 	styleMuted   = lipgloss.NewStyle().Foreground(clrMuted)
 	styleSuccess = lipgloss.NewStyle().Foreground(clrGreen).Bold(true)
 	styleError   = lipgloss.NewStyle().Foreground(clrRed).Bold(true)
@@ -98,19 +96,6 @@ func installBadge(count string) string {
 		return ""
 	}
 	return lipgloss.NewStyle().Foreground(clrGold).Bold(true).Render("📦 " + count)
-}
-
-func riskBadge(risk string) string {
-	switch strings.ToLower(risk) {
-	case "critical":
-		return styleError.Render("🔴 critical")
-	case "safe":
-		return styleSuccess.Render("🟢 safe")
-	case "none":
-		return styleMuted.Render("○ none")
-	default:
-		return ""
-	}
 }
 
 func outcomeBadge(outcome string) string {

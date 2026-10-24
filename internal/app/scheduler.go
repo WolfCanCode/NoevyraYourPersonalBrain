@@ -92,37 +92,31 @@ func installScheduler(brainHome string) (map[string]any, error) {
 	if err = os.MkdirAll(filepath.Dir(file), 0700); err != nil {
 		return nil, err
 	}
-	var command string
-	var args []string
-	if runtime.GOOS == "darwin" {
-		plist, _, e := schedulerDefinitions(runtime.GOOS, exe, brainHome)
-		if e != nil {
-			return nil, e
-		}
-		if err = os.WriteFile(file, []byte(plist), 0600); err != nil {
-			return nil, err
-		}
-		command = "launchctl"
-		args = []string{"bootstrap", fmt.Sprintf("gui/%d", os.Getuid()), file}
-	} else {
-		service, timer, e := schedulerDefinitions(runtime.GOOS, exe, brainHome)
-		if e != nil {
-			return nil, e
-		}
-		if err = os.WriteFile(filepath.Join(filepath.Dir(file), "personal-ai-brain.service"), []byte(service), 0600); err != nil {
-			return nil, err
-		}
-		if err = os.WriteFile(file, []byte(timer), 0600); err != nil {
-			return nil, err
-		}
-		if text, e := external("systemctl", []string{"--user", "daemon-reload"}); e != nil {
-			return map[string]any{"installed": false, "definition": file, "message": text, "error": e.Error()}, nil
-		}
-		command = "systemctl"
-		args = []string{"--user", "enable", "--now", "personal-ai-brain.timer"}
+	service, timer, err := schedulerDefinitions(runtime.GOOS, exe, brainHome)
+	if err != nil {
+		return nil, err
 	}
+	if runtime.GOOS == "darwin" {
+		if err := os.WriteFile(file, []byte(service), 0600); err != nil {
+			return nil, err
+		}
+		return activateSchedule("launchctl", []string{"bootstrap", fmt.Sprintf("gui/%d", os.Getuid()), file}, file)
+	}
+	if err := os.WriteFile(filepath.Join(filepath.Dir(file), "personal-ai-brain.service"), []byte(service), 0600); err != nil {
+		return nil, err
+	}
+	if err := os.WriteFile(file, []byte(timer), 0600); err != nil {
+		return nil, err
+	}
+	if text, err := external("systemctl", []string{"--user", "daemon-reload"}); err != nil {
+		return map[string]any{"installed": false, "definition": file, "message": text, "error": err.Error()}, nil
+	}
+	return activateSchedule("systemctl", []string{"--user", "enable", "--now", "personal-ai-brain.timer"}, file)
+}
+
+func activateSchedule(command string, args []string, file string) (map[string]any, error) {
 	// Only invoked by explicit `init --schedule`. Existing schedules are never silently replaced on startup.
-	if _, err = exec.LookPath(command); err != nil {
+	if _, err := exec.LookPath(command); err != nil {
 		return map[string]any{"installed": false, "definition": file, "error": err.Error()}, nil
 	}
 	text, err := external(command, args)

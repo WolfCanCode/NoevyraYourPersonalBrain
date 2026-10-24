@@ -8,25 +8,53 @@
 
 ```
 cmd/brain/              — entry point; version/commit/builtAt injected via ldflags
+cmd/package/            — archive and checksum a tested native executable
 internal/
   app/
-    cli.go              — command dispatch, flag parsing
-    setup.go            — brain setup: detection → TUI select → provision → persist
+    cli.go              — command dispatch and store lifecycle
+    args.go, help.go    — flat argument parsing, JSON output, command help
+    commands_*.go       — memory and intelligence command handlers
+    skills.go           — local catalog search and explicit external fallback
+    agent.go, process.go — agent sessions and bounded subprocess execution
+    setup.go            — brain setup orchestration
+    setup_flow.go       — overwrite approval, discovery, provisioning, persistence
+    setup_display.go, setup_status.go — setup rendering and stored-profile view
+    setup_selection.go, setup_skills.go — capability selection and skill discovery
     update.go           — brain update: GitHub release download, SHA-256, atomic replace
-    mcp.go              — JSON-RPC 2.0 stdio MCP server
+    mcp.go              — bounded JSON-RPC 2.0 stdio transport
+    mcp_session.go      — MCP initialization, readiness, dispatch, error boundaries
+    mcp_tools.go        — tool schemas, argument validation, storage adapters
     ui.go               — lipgloss styles, huh TUI helpers, badge renderers, isTTY()
     scheduler.go        — macOS launchd / Linux systemd timer
+    steer.go, steer_display.go — steering-file writes and their presentation
   intelligence/
     profile.go          — bounded project profiling (language, stack, signal detection)
     provision.go        — ProvisionCatalog, DiscoverCapabilities, Provision, writeMCPEntry
     aas.go              — SearchSkillsCatalog, CatalogSeeded (FTS5 over skill items)
     embed.go            — //go:embed skills_index.json, SeedEmbeddedCatalog
     skills_index.json   — 2 737 AAS skills, bundled at build time, refreshed in CI
-    compiler.go         — token-budgeted context compiler (Compile, Feedback)
-    source.go           — trusted source sync, chunksFromSkillsIndex JSON parser
+    compiler.go         — context-pack types, token helpers, Compile orchestration
+    retrieval.go, selection.go — evidence retrieval, ranking, budget selection
+    recommendations.go  — capability recommendations and reasoning frames
+    feedback.go         — feedback persistence and adaptive budgeting
+    source.go           — trusted source registry, persistence and synchronization
+    source_fetch.go, source_chunks.go — bounded HTTP fetches and text chunking
   memory/
-    store.go            — schema v3, FTS5, Recall, UpsertProfile, Trust, Skills
+    store.go, schema.go — private connection lifecycle and transactional migrations
+    models.go, project.go — data types and project identity
+    memories.go         — verified/candidate writes, approval, FTS5 recall
+    events.go           — event log, statistics, sync and digest
+    skills.go, profiles.go — reviewed skills and persisted project profiles
+  release/
+    package.go          — standard-library tar.gz/zip archives and SHA-256 sidecars
+tests/                  — native executable smoke tests and installer checks
+  testdata/legacy.sql   — frozen schema from the retired JavaScript runtime
+site/                   — static HTML/CSS, including the native radio command selector
 ```
+
+Handlers use early returns for invalid input and failed operations; ordinary Go error checks remain explicit. CLI dispatch and capability kinds use switches. Presentation is separate from orchestration so terminal and plain-text branches do not obscure storage or approval decisions.
+
+The storage package owns connection initialization and migrations. Transactions retain deferred rollback and explicit commit, and query readers close before the next query on the single connection. MCP protocol errors, tool execution errors and transport failures remain separate. Refactors preserve JSON field names, empty-array behavior, retrieval ordering and trust rules; behavioral tests cover these boundaries.
 
 ---
 

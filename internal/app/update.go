@@ -280,12 +280,7 @@ func replaceBinary(data []byte, tag string, out io.Writer) error {
 	}
 	tmpPath := tmp.Name()
 	// Ensure temp is cleaned up if we exit early.
-	removeTemp := func() {
-		if _, e := os.Stat(tmpPath); e == nil {
-			os.Remove(tmpPath)
-		}
-	}
-	defer removeTemp()
+	defer os.Remove(tmpPath)
 
 	if _, err = tmp.Write(data); err != nil {
 		tmp.Close()

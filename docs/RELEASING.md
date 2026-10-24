@@ -2,10 +2,20 @@
 
 Every PR and push to `main` runs the same reusable binary workflow that a tagged release uses:
 
-1. Static analysis, Go unit/race tests and the JavaScript baseline.
+1. Formatting, static analysis, Go unit/race tests and installer checks.
 2. Build with CGO disabled, trimmed paths and version/commit/time metadata.
-3. Run the actual binary: SQLite writes, bidirectional JavaScript compatibility, MCP candidate/approval, sync and configuration.
-4. Archive the tested executable with license/docs; calculate SHA-256.
+3. Run the actual binary: migrate a legacy SQLite schema fixture, verify persistent writes and project isolation, MCP candidate/approval, sync and configuration.
+4. Archive the tested executable with license/docs using Go; calculate SHA-256.
+
+From the repository root, test and package a local executable with:
+
+```sh
+go build -o build/brain ./cmd/brain
+BRAIN_TEST_BINARY="$PWD/build/brain" go test -count=1 -v ./tests
+go run ./cmd/package build/brain dev darwin arm64
+```
+
+Use your executable's OS and architecture for the final two arguments. Windows packages use `.zip` and `brain.exe`; Linux and macOS use `.tar.gz` and an executable `brain`. The packager writes `dist/brain_<version>_<os>_<arch>.<extension>` and its `.sha256` sidecar. Neither testing nor packaging requires Node.js or Python. GitHub's official actions manage their own runtime.
 
 Targets: Linux x64 and ARM64, macOS Intel and Apple Silicon, Windows x64. These are native builds tested on matching runners, not merely cross-compiled executables. PR artifacts are development builds with a 14-day retention period; they are not GitHub Releases.
 
@@ -28,7 +38,7 @@ Download the appropriate archive and `SHA256SUMS` from the release, verify it wi
 
 The repository-root `install.sh` and `install.ps1` automate that same download, checksum verification and PATH-directory installation. The POSIX installer supports Linux/macOS on AMD64 and ARM64; the PowerShell installer supports the published Windows AMD64 target. Both default to the latest GitHub Release and accept a pinned version and custom install directory. Keep the asset naming convention and installer tests synchronized whenever the release matrix changes.
 
-Before switching, stop running Brain processes and back up the database with SQLite's backup API/command; copying only `brain.sqlite` while writers use WAL can omit recent transactions. Reconfigure MCP to use `/absolute/path/brain mcp` and reinstall local schedules with the new permanent executable path via `brain init --schedule`. Native preview and legacy JavaScript remain available during migration.
+Before switching, stop running Brain processes and back up the database with SQLite's backup API/command; copying only `brain.sqlite` while writers use WAL can omit recent transactions. Reconfigure MCP to use `/absolute/path/brain mcp` and reinstall local schedules with the new permanent executable path via `brain init --schedule`. The legacy JavaScript runtime has been retired; the Go runtime retains its SQLite schema compatibility. Integration tests migrate a frozen legacy schema, reopen the database across CLI processes, and verify old and new memories remain searchable.
 
 ## Sources
 

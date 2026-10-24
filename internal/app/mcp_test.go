@@ -3,6 +3,7 @@ package app
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"github.com/WolfCanCode/personal-ai-brain/internal/memory"
 	"strings"
 	"testing"
@@ -65,6 +66,59 @@ func TestMCPProtocolAndCandidatePolicy(t *testing.T) {
 	}
 	if results[8]["error"].(map[string]any)["code"] != float64(-32700) {
 		t.Fatal("parse error not reported")
+	}
+}
+
+func TestMCPLifecycleErrors(t *testing.T) {
+	init := `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18"}}`
+	ready := `{"jsonrpc":"2.0","method":"notifications/initialized"}`
+	for _, tt := range []struct {
+		name, prefix, request string
+		code                  float64
+	}{
+		{"not ready", init, `{"jsonrpc":"2.0","id":2,"method":"tools/list"}`, -32000},
+		{"duplicate initialization", init, init, -32600},
+		{"missing version", "", `{"jsonrpc":"2.0","id":2,"method":"initialize","params":{}}`, -32602},
+		{"unknown tool", init + "\n" + ready, `{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"unknown"}}`, -32602},
+		{"null arguments", init + "\n" + ready, `{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"brain_recall","arguments":null}}`, -32602},
+		{"missing method", "", `{"jsonrpc":"2.0","id":2,"method":"unknown"}`, -32601},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			s, err := memory.Open(t.TempDir())
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer s.Close()
+			var output bytes.Buffer
+			input := strings.TrimSpace(tt.prefix + "\n" + tt.request)
+			if err := ServeMCP(s, memory.Project{ID: "p"}, "test", strings.NewReader(input), &output); err != nil {
+				t.Fatal(err)
+			}
+			lines := strings.Split(strings.TrimSpace(output.String()), "\n")
+			var response struct{ Error struct{ Code float64 } }
+			if err := json.Unmarshal([]byte(lines[len(lines)-1]), &response); err != nil {
+				t.Fatal(err)
+			}
+			if response.Error.Code != tt.code {
+				t.Fatalf("got %s, want code %v", output.String(), tt.code)
+			}
+		})
+	}
+}
+
+type failingMCPWriter struct{ err error }
+
+func (w failingMCPWriter) Write([]byte) (int, error) { return 0, w.err }
+
+func TestMCPTransportErrors(t *testing.T) {
+	want := errors.New("output closed")
+	err := ServeMCP(nil, memory.Project{}, "test", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"ping"}`), failingMCPWriter{want})
+	if !errors.Is(err, want) {
+		t.Fatalf("got %v, want %v", err, want)
+	}
+	err = ServeMCP(nil, memory.Project{}, "test", strings.NewReader(strings.Repeat("x", 1024*1024+1)), &bytes.Buffer{})
+	if err == nil {
+		t.Fatal("oversized message accepted")
 	}
 }
 func TestCLIFlagsDoNotSilentlyChangeMeaning(t *testing.T) {
