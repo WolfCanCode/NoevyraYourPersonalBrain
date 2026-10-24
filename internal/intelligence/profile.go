@@ -85,33 +85,8 @@ func inspectManifest(root, name string, stacks, signals map[string]bool) {
 	text := strings.ToLower(string(b))
 	switch name {
 	case "package.json":
-		var pkg struct {
-			Dependencies    map[string]any `json:"dependencies"`
-			DevDependencies map[string]any `json:"devDependencies"`
-		}
-		if json.Unmarshal(b, &pkg) == nil {
-			allDeps := map[string]bool{}
-			for dep := range pkg.Dependencies {
-				add(stacks, dep)
-				allDeps[strings.ToLower(dep)] = true
-			}
-			for dep := range pkg.DevDependencies {
-				add(stacks, dep)
-				allDeps[strings.ToLower(dep)] = true
-			}
-			// Promote framework-level signals from known dependency markers so that
-			// brain setup can suggest project-specific capabilities rather than
-			// generic recommendations for every TypeScript project.
-			for _, fw := range nodeFrameworks {
-				for _, marker := range fw.markers {
-					if allDeps[marker] {
-						add(signals, fw.signal)
-						break
-					}
-				}
-			}
-		}
 		add(signals, "node")
+		inspectNodeDependencies(b, stacks, signals)
 	case "go.mod":
 		add(stacks, "go")
 		for _, line := range strings.Split(text, "\n") {
@@ -233,4 +208,35 @@ func Profile(root string) (ProjectProfile, error) {
 	profile.Signals = sorted(signals)
 	profile.Manifests = sorted(manifests)
 	return profile, nil
+}
+
+func inspectNodeDependencies(data []byte, stacks, signals map[string]bool) {
+	var pkg struct {
+		Dependencies    map[string]any `json:"dependencies"`
+		DevDependencies map[string]any `json:"devDependencies"`
+	}
+	if json.Unmarshal(data, &pkg) != nil {
+		return
+	}
+
+	allDeps := map[string]bool{}
+	for dep := range pkg.Dependencies {
+		add(stacks, dep)
+		allDeps[strings.ToLower(dep)] = true
+	}
+	for dep := range pkg.DevDependencies {
+		add(stacks, dep)
+		allDeps[strings.ToLower(dep)] = true
+	}
+	// Promote framework-level signals from known dependency markers so that
+	// brain setup can suggest project-specific capabilities rather than
+	// generic recommendations for every TypeScript project.
+	for _, fw := range nodeFrameworks {
+		for _, marker := range fw.markers {
+			if allDeps[marker] {
+				add(signals, fw.signal)
+				break
+			}
+		}
+	}
 }

@@ -37,6 +37,8 @@ irm https://raw.githubusercontent.com/WolfCanCode/personal-ai-brain/main/install
 
 Already installed? `brain update` pulls the latest release in-place.
 
+Brain's runtime, tests, and release packaging use Go. No Node.js or Python installation is needed for core CLI or MCP operations. Optional third-party integrations may require their own tools. The landing page uses static HTML/CSS without JavaScript.
+
 ## Quickstart
 
 ```sh

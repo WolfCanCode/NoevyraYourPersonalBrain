@@ -134,17 +134,14 @@ alwaysApply: true
 //	--global   write to home-directory files instead of the current project
 //	--dry-run  print what would be written without creating files
 func runSteer(args []string, out, errOut io.Writer) error {
-	_, f, err := flags(args, nil, []string{"--global", "--dry-run"})
+	_, options, err := flags(args, nil, []string{"--global", "--dry-run"})
 	if err != nil {
 		return err
 	}
-	global := f["--global"] != ""
-	dryRun := f["--dry-run"] != ""
-
+	global, dryRun := options["--global"] != "", options["--dry-run"] != ""
 	if isTTY() {
 		printHeader("brain steer")
 	}
-
 	cwd, err := os.Getwd()
 	if err != nil {
 		return err
@@ -153,131 +150,66 @@ func runSteer(args []string, out, errOut io.Writer) error {
 	if err != nil {
 		return err
 	}
-
 	scope := "project"
 	if global {
 		scope = "global"
 	}
-
 	if isTTY() {
 		fmt.Printf("  %s  scope: %s\n\n", styleMuted.Render("Creating steering files for all detected agents —"), styleAccent.Render(scope))
 	} else {
 		fmt.Fprintf(out, "Creating brain steering files (%s scope)\n\n", scope)
 	}
-
 	written, skipped, notFound := []string{}, []string{}, []string{}
-
 	for _, agent := range steeringAgents {
-		// Detect whether the agent is installed.
+		target := steeringTarget(agent, cwd, home, global)
 		_, lookErr := exec.LookPath(agent.binary)
-		installed := lookErr == nil
-
-		// Determine target file path.
-		rel := agent.projectFile
-		if global {
-			rel = agent.globalFile
-		}
-		var target string
-		if global {
-			target = filepath.Join(home, rel)
-		} else {
-			target = filepath.Join(cwd, rel)
-		}
-
-		content := agent.header + brainSteeringContent
-
 		if dryRun {
-			status := styleMuted.Render("not in PATH")
-			if installed {
-				status = styleSuccess.Render("detected")
-			}
-			if isTTY() {
-				fmt.Printf("  %s  %s  %s\n",
-					kindBadge("skill"),
-					styleWhite.Render(fmt.Sprintf("%-8s", agent.name)),
-					status,
-				)
-				fmt.Printf("    %s\n\n", styleMuted.Render(target))
-			} else {
-				fmt.Fprintf(out, "  %-8s  %s\n    %s\n\n",
-					agent.name, map[bool]string{true: "detected", false: "not in PATH"}[installed], target)
-			}
+			printSteeringPreview(out, agent, target, lookErr == nil)
 			continue
 		}
-
-		if !installed {
+		if lookErr != nil {
 			notFound = append(notFound, agent.name)
-			if isTTY() {
-				fmt.Printf("  %s  %-8s  %s\n",
-					styleMuted.Render("⊝"),
-					agent.name,
-					styleMuted.Render("not in PATH — skipped"),
-				)
-			} else {
-				fmt.Fprintf(out, "  %-8s  not in PATH — skipped\n", agent.name)
-			}
+			printSteeringResult(out, agent, target, "missing")
 			continue
 		}
-
-		// Check if file already contains brain content.
-		if existing, readErr := os.ReadFile(target); readErr == nil {
-			if strings.Contains(string(existing), "brain_recall") ||
-				strings.Contains(string(existing), "brain_remember") {
-				skipped = append(skipped, agent.name)
-				if isTTY() {
-					fmt.Printf("  %s  %-8s  %s\n",
-						styleMuted.Render("⊝"),
-						agent.name,
-						styleMuted.Render("already has brain instructions — skipped (use --force to overwrite)"),
-					)
-				} else {
-					fmt.Fprintf(out, "  %-8s  already configured — skipped\n", agent.name)
-				}
-				continue
-			}
-			// Append to existing file.
-			content = strings.TrimRight(string(existing), "\n") + "\n\n" + agent.header + brainSteeringContent
-		}
-
-		if err = os.MkdirAll(filepath.Dir(target), 0700); err != nil {
-			fmt.Fprintf(errOut, "brain steer: mkdir %s: %v\n", filepath.Dir(target), err)
+		changed, err := configureSteeringFile(agent, target)
+		if err != nil {
+			fmt.Fprintln(errOut, "brain steer:", err)
 			continue
 		}
-		if err = os.WriteFile(target, []byte(content), 0600); err != nil {
-			fmt.Fprintf(errOut, "brain steer: write %s: %v\n", target, err)
+		if !changed {
+			skipped = append(skipped, agent.name)
+			printSteeringResult(out, agent, target, "skipped")
 			continue
 		}
 		written = append(written, agent.name)
-		if isTTY() {
-			fmt.Printf("  %s  %-8s  %s\n",
-				styleSuccess.Render("✓"),
-				agent.name,
-				styleMuted.Render(target),
-			)
-		} else {
-			fmt.Fprintf(out, "  %-8s  written → %s\n", agent.name, target)
-		}
+		printSteeringResult(out, agent, target, "written")
 	}
-
-	fmt.Fprintln(out)
-	if isTTY() {
-		if len(written) > 0 {
-			fmt.Println(styleSuccess.Render(fmt.Sprintf("  ✦ %d agent(s) configured.", len(written))))
-		}
-		fmt.Println(styleMuted.Render("  Each agent will now automatically call brain_recall, brain_remember,"))
-		fmt.Println(styleMuted.Render("  and brain_finish_task without being asked."))
-		if len(notFound) > 0 {
-			fmt.Println(styleMuted.Render(fmt.Sprintf("  Not in PATH: %s — install and re-run 'brain steer'.", strings.Join(notFound, ", "))))
-		}
-		if len(skipped) > 0 {
-			fmt.Println(styleMuted.Render(fmt.Sprintf("  Already configured: %s.", strings.Join(skipped, ", "))))
-		}
-	} else {
-		if len(written) > 0 {
-			fmt.Fprintf(out, "Done. %d agent(s) configured: %s\n", len(written), strings.Join(written, ", "))
-		}
-		fmt.Fprintln(out, "Each agent will now auto-call brain_recall, brain_remember, brain_finish_task.")
-	}
-	fmt.Fprintln(out)
+	printSteeringSummary(out, written, skipped, notFound)
 	return nil
+}
+
+func steeringTarget(agent steeringAgent, cwd, home string, global bool) string {
+	if global {
+		return filepath.Join(home, agent.globalFile)
+	}
+	return filepath.Join(cwd, agent.projectFile)
+}
+
+func configureSteeringFile(agent steeringAgent, target string) (bool, error) {
+	content := agent.header + brainSteeringContent
+	existing, readErr := os.ReadFile(target)
+	if readErr == nil {
+		if strings.Contains(string(existing), "brain_recall") || strings.Contains(string(existing), "brain_remember") {
+			return false, nil
+		}
+		content = strings.TrimRight(string(existing), "\n") + "\n\n" + content
+	}
+	if err := os.MkdirAll(filepath.Dir(target), 0700); err != nil {
+		return false, fmt.Errorf("mkdir %s: %w", filepath.Dir(target), err)
+	}
+	if err := os.WriteFile(target, []byte(content), 0600); err != nil {
+		return false, fmt.Errorf("write %s: %w", target, err)
+	}
+	return true, nil
 }

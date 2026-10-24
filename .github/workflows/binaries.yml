@@ -44,7 +44,7 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5 (Node 24)
         with:
           persist-credentials: false
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
@@ -52,9 +52,6 @@ jobs:
           go-version: '1.27.3'
           cache: true
           cache-dependency-path: go.sum
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: '22.20.0'
       - name: Verify locked dependencies
         run: |
           go mod download
@@ -62,15 +59,12 @@ jobs:
           git diff --exit-code -- go.mod go.sum
       - name: Format and static analysis
         run: |
-          UNFORMATTED="$(gofmt -l cmd internal)"
+          UNFORMATTED="$(gofmt -l cmd internal tests)"
           if [[ -n "$UNFORMATTED" ]]; then echo "$UNFORMATTED"; exit 1; fi
           go vet ./...
+          go run honnef.co/go/tools/cmd/staticcheck@v0.8.2 ./...
       - name: Go tests and race detection
         run: go test -race -count=1 ./...
-      - name: JavaScript compatibility baseline
-        run: |
-          npm test
-          npm run check
       - name: Refresh embedded AAS skills catalog
         run: |
           curl -fsSL https://raw.githubusercontent.com/sickn33/agentic-awesome-skills/main/skills_index.json \
@@ -98,13 +92,13 @@ jobs:
       - name: Test the exact executable
         env:
           EXT: ${{ matrix.ext }}
-        run: node scripts/smoke.mjs "build/brain$EXT"
+        run: BRAIN_TEST_BINARY="build/brain$EXT" BRAIN_EXPECT_VERSION="$BRAIN_VERSION" go test -count=1 -v ./tests
       - name: Package and checksum
         env:
           TARGET_OS: ${{ matrix.os }}
           TARGET_ARCH: ${{ matrix.arch }}
           EXT: ${{ matrix.ext }}
-        run: python scripts/package.py "build/brain$EXT" "$BRAIN_VERSION" "$TARGET_OS" "$TARGET_ARCH"
+        run: go run ./cmd/package "build/brain$EXT" "$BRAIN_VERSION" "$TARGET_OS" "$TARGET_ARCH"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: brain-${{ matrix.os }}-${{ matrix.arch }}

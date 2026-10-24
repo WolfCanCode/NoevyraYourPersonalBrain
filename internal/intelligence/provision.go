@@ -287,16 +287,17 @@ func provisionSkill(cap ProvisionableCapability, store *memory.Store, dryRun boo
 	}
 	io.WriteString(out, "  Skill: "+cap.Name+"\n  "+cap.Description+"\n  Approve? [y/N]: ")
 	scanner := bufio.NewScanner(in)
-	if scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "y" || line == "Y" {
-			if err := store.Trust(cap.Ref, cap.SkillKeyword); err != nil {
-				return ProvisionResult{Capability: cap, Outcome: OutcomeFailed, Error: err.Error()}
-			}
-			return ProvisionResult{Capability: cap, Outcome: OutcomeProvisioned}
-		}
+	if !scanner.Scan() {
+		return ProvisionResult{Capability: cap, Outcome: OutcomeSkipped}
 	}
-	return ProvisionResult{Capability: cap, Outcome: OutcomeSkipped}
+	line := strings.TrimSpace(scanner.Text())
+	if line != "y" && line != "Y" {
+		return ProvisionResult{Capability: cap, Outcome: OutcomeSkipped}
+	}
+	if err := store.Trust(cap.Ref, cap.SkillKeyword); err != nil {
+		return ProvisionResult{Capability: cap, Outcome: OutcomeFailed, Error: err.Error()}
+	}
+	return ProvisionResult{Capability: cap, Outcome: OutcomeProvisioned}
 }
 
 func provisionCLI(cap ProvisionableCapability, dryRun bool) ProvisionResult {
@@ -321,11 +322,7 @@ func atomicWriteJSON(path string, data []byte) error {
 		return err
 	}
 	tmpName := tmp.Name()
-	defer func() {
-		if _, e := os.Stat(tmpName); e == nil {
-			os.Remove(tmpName)
-		}
-	}()
+	defer os.Remove(tmpName)
 	if _, err = tmp.Write(append(data, '\n')); err != nil {
 		tmp.Close()
 		return err
@@ -341,29 +338,7 @@ func atomicWriteJSON(path string, data []byte) error {
 // Preserves all other top-level keys. Idempotent — calling N times yields the same
 // result as calling once (Req 4.6).
 func writeMCPEntry(path, serverName string, entry MCPServerDef) error {
-	top := map[string]json.RawMessage{}
-	if data, err := os.ReadFile(path); err == nil && len(data) > 0 {
-		_ = json.Unmarshal(data, &top)
-	}
-	servers := map[string]json.RawMessage{}
-	if raw, ok := top["mcpServers"]; ok {
-		_ = json.Unmarshal(raw, &servers)
-	}
-	entryBytes, err := json.Marshal(entry)
-	if err != nil {
-		return err
-	}
-	servers[serverName] = entryBytes
-	serversBytes, err := json.Marshal(servers)
-	if err != nil {
-		return err
-	}
-	top["mcpServers"] = serversBytes
-	out, err := json.MarshalIndent(top, "", "  ")
-	if err != nil {
-		return err
-	}
-	return atomicWriteJSON(path, out)
+	return mergeMCPEntry(path, "mcpServers", serverName, entry, false)
 }
 
 // WriteMCPEntry is the exported variant used by tests.
@@ -374,21 +349,30 @@ func WriteMCPEntry(path, serverName string, entry MCPServerDef) error {
 // writeOpenCodeMCPEntry writes into the opencode.json "mcp" envelope,
 // which uses {"type":"local","command":[...]} instead of {"command":"...","args":[...]}.
 func writeOpenCodeMCPEntry(path, serverName string, entry MCPServerDef) error {
+	// OpenCode format: {"type":"local","command":["binary","arg"],"enabled":true}
+	command := append([]string{entry.Command}, entry.Args...)
+	return mergeMCPEntry(path, "mcp", serverName, map[string]any{
+		"type": "local", "command": command, "enabled": true,
+	}, true)
+}
+
+// mergeMCPEntry preserves unrelated configuration while replacing one server entry.
+func mergeMCPEntry(path, envelope, serverName string, entry any, openCodeSchema bool) error {
 	top := map[string]json.RawMessage{}
 	if data, err := os.ReadFile(path); err == nil && len(data) > 0 {
 		_ = json.Unmarshal(data, &top)
 	}
+	if top == nil {
+		top = map[string]json.RawMessage{}
+	}
 	servers := map[string]json.RawMessage{}
-	if raw, ok := top["mcp"]; ok {
+	if raw, ok := top[envelope]; ok {
 		_ = json.Unmarshal(raw, &servers)
 	}
-	// OpenCode format: {"type":"local","command":["binary","arg"],"enabled":true}
-	cmd := append([]string{entry.Command}, entry.Args...)
-	entryBytes, err := json.Marshal(map[string]any{
-		"type":    "local",
-		"command": cmd,
-		"enabled": true,
-	})
+	if servers == nil {
+		servers = map[string]json.RawMessage{}
+	}
+	entryBytes, err := json.Marshal(entry)
 	if err != nil {
 		return err
 	}
@@ -397,9 +381,8 @@ func writeOpenCodeMCPEntry(path, serverName string, entry MCPServerDef) error {
 	if err != nil {
 		return err
 	}
-	top["mcp"] = serversBytes
-	// Preserve $schema if already set, or add it.
-	if _, ok := top["$schema"]; !ok {
+	top[envelope] = serversBytes
+	if _, ok := top["$schema"]; openCodeSchema && !ok {
 		schema, _ := json.Marshal("https://opencode.ai/config.json")
 		top["$schema"] = schema
 	}

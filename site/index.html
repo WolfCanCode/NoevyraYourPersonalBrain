@@ -21,34 +21,39 @@
   --gold:#D4A843;--gold-dim:#8A6A28;--navy:#7B9FCB;
   --green:#5EC66E;--red:#E07070;--amber:#E8A545
 }
-body{background:var(--bg);color:var(--text);font:15px/1.65 system-ui,-apple-system,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased}
+body{background:var(--bg);color:var(--text);font:15px/1.65 system-ui,-apple-system,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased;overflow-wrap:break-word}
 a{color:inherit;text-decoration:none}
 button{font:inherit;cursor:pointer}
 /* ── Layout ── */
 .wrap{max-width:1100px;margin:0 auto;padding-inline:32px}
+/* Grid tracks and their children must shrink below long command widths. */
+.hero-grid>*,.how-grid>*,.agents-demo>*,.why-grid>*,.feats-grid>*,.roadmap-grid>*,.cta-grid>*{min-width:0}
+img{max-width:100%}
+:where(a,label,input):focus-visible{outline:2px solid var(--gold);outline-offset:4px}
+section[id],main[id]{scroll-margin-top:80px}
 /* ── Nav ── */
 nav{border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;backdrop-filter:blur(16px);background:rgba(10,10,15,.85)}
-.nav-inner{max-width:1100px;margin:0 auto;padding:0 32px;height:62px;display:flex;align-items:center;justify-content:space-between}
+.nav-inner{max-width:1100px;margin:0 auto;padding:0 32px;height:62px;display:flex;align-items:center;justify-content:space-between;gap:20px}
 .brand{display:flex;align-items:center;gap:10px;font:700 14px/1 system-ui;letter-spacing:-.2px}
 .mark{width:30px;height:30px;border-radius:7px;background:#fff;overflow:hidden;flex-shrink:0;border:1px solid var(--border-gold)}
 .mark img{width:100%;height:100%;object-fit:cover}
 .nav-links{display:flex;gap:28px;font-size:13px;color:var(--muted)}
 .nav-links a:hover{color:var(--text);transition:color .15s}
-.nav-r{display:flex;align-items:center;gap:12px}
-.nav-cta{background:var(--gold);color:#150F00;border:none;border-radius:7px;padding:8px 16px;font:700 13px system-ui;letter-spacing:-.1px}
+.nav-r{display:flex;align-items:center;gap:12px;flex-shrink:0}
+.nav-cta{background:var(--gold);color:#150F00;border:none;border-radius:7px;padding:8px 16px;font:700 13px system-ui;letter-spacing:-.1px;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;min-height:40px}
 .nav-cta:hover{filter:brightness(1.08)}
 .nav-github{padding:8px 14px;font-size:13px;font-weight:600;border-radius:7px}
 /* ── Hero ── */
-.hero{padding:80px 0 64px}
-.hero-grid{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:start}
+.hero{padding-block:80px 64px}
+.hero-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:60px;align-items:start}
 .eyebrow{display:flex;align-items:center;gap:8px;margin-bottom:22px}
-.eyebrow-dot{width:6px;height:6px;border-radius:50%;background:var(--green)}
-.eyebrow-txt{font:11px/1 ui-monospace,monospace;letter-spacing:1.1px;text-transform:uppercase;color:var(--gold)}
+.eyebrow-dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0}
+.eyebrow-txt{font:11px/1.5 ui-monospace,monospace;letter-spacing:1.1px;text-transform:uppercase;color:var(--gold)}
 h1{font-size:clamp(38px,4.2vw,54px);font-weight:800;line-height:1.07;letter-spacing:-2.5px;margin-bottom:18px}
 h1 .ac{color:var(--gold)}
 .hero-lead{font-size:15px;line-height:1.75;color:var(--subtle);max-width:400px;margin-bottom:30px}
 .hero-lead strong{color:var(--text);font-weight:600}
-.hero-btns{display:flex;gap:10px;margin-bottom:18px}
+.hero-btns{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:18px}
 .btn-gold{background:var(--gold);color:#150F00;border:none;border-radius:8px;padding:11px 20px;font:700 13px system-ui}
 .btn-gold:hover{filter:brightness(1.08)}
 .btn-outline{background:transparent;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:11px 20px;font:600 13px system-ui}
@@ -58,13 +63,13 @@ h1 .ac{color:var(--gold)}
 .term{background:#0C0C13;border:1px solid rgba(255,255,255,.08);border-radius:12px;overflow:hidden;box-shadow:0 0 60px rgba(212,168,67,.05),0 24px 64px rgba(0,0,0,.5)}
 .tbar{padding:11px 15px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:7px}
 .tc{width:9px;height:9px;border-radius:50%}
-.ttitle{flex:1;text-align:center;font:11px ui-monospace,monospace;color:var(--muted)}
-.tbody{padding:20px 22px;font:12px/1.95 ui-monospace,monospace}
+.ttitle{flex:1;min-width:0;text-align:center;font:11px ui-monospace,monospace;color:var(--muted);overflow-wrap:anywhere}
+.tbody{padding:20px 22px;font:12px/1.95 ui-monospace,monospace;overflow-wrap:anywhere}
 .t-gp{color:var(--gold)}.t-ok{color:var(--green)}.t-mu{color:var(--muted)}.t-wh{color:var(--text)}.t-nb{color:var(--navy)}.t-am{color:var(--amber)}
 .tbm{display:inline-block;background:rgba(212,168,67,.11);color:var(--gold);border-radius:3px;padding:0 5px;font-size:11px;font-weight:700;letter-spacing:.2px}
 .tbs{display:inline-block;background:rgba(123,159,203,.11);color:var(--navy);border-radius:3px;padding:0 5px;font-size:11px;font-weight:700;letter-spacing:.2px}
 /* ── Stats ── */
-.stats-strip{border-top:1px solid var(--border);border-bottom:1px solid var(--border);display:grid;grid-template-columns:repeat(4,1fr)}
+.stats-strip{border-top:1px solid var(--border);border-bottom:1px solid var(--border);display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}
 .stat{padding:22px 0;text-align:center;border-right:1px solid var(--border)}
 .stat:last-child{border-right:0}
 .stat-v{font:800 24px/1 system-ui;letter-spacing:-.5px}
@@ -76,7 +81,7 @@ section{padding:80px 0;border-bottom:1px solid var(--border)}
 h2{font-size:clamp(26px,3vw,36px);font-weight:800;line-height:1.12;letter-spacing:-1.5px}
 h2 span{color:var(--gold)}
 /* ── Why ── */
-.why-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:32px}
+.why-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:32px}
 .why-card{border:1px solid var(--border);border-radius:10px;padding:26px;background:linear-gradient(140deg,var(--card),#0F0F16)}
 .why-label{font:11px ui-monospace,monospace;color:var(--gold-dim);margin-bottom:16px;letter-spacing:.5px}
 .why-card h3{font-size:16px;font-weight:700;margin-bottom:14px;letter-spacing:-.2px}
@@ -85,7 +90,7 @@ h2 span{color:var(--gold)}
 .why-list li span{flex-shrink:0;font-size:12px}
 .why-list.bad li{color:var(--muted)}
 /* ── How ── */
-.how-grid{display:grid;grid-template-columns:.9fr 1.1fr;gap:60px;align-items:start;margin-top:40px}
+.how-grid{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:60px;align-items:start;margin-top:40px}
 .how-desc{font-size:14px;line-height:1.75;color:var(--subtle);margin-top:16px}
 .steps{display:flex;flex-direction:column}
 .step{display:flex;gap:18px;padding:18px 0;border-top:1px solid var(--border)}
@@ -95,49 +100,60 @@ h2 span{color:var(--gold)}
 /* ── Agents ── */
 .agents-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px}
 .agent-tab{border:1px solid var(--border);background:transparent;color:var(--muted);border-radius:7px;padding:8px 16px;font:12px ui-monospace,monospace;transition:all .15s}
-.agent-tab[aria-pressed=true]{background:rgba(212,168,67,.1);color:var(--gold);border-color:var(--border-gold)}
-.agents-demo{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:24px}
+.agent-choice,.agent-selector legend{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.agent-selector{border:0;padding:0;margin:0;min-width:0}
+.agent-tab{cursor:pointer}
+.agent-command{display:none}
+#agent-claude:checked~.demo-cmd .cmd-claude,#agent-codex:checked~.demo-cmd .cmd-codex,#agent-cursor:checked~.demo-cmd .cmd-cursor,#agent-kiro:checked~.demo-cmd .cmd-kiro{display:block}
+#agent-claude:checked~.agents-tabs [for=agent-claude],#agent-codex:checked~.agents-tabs [for=agent-codex],#agent-cursor:checked~.agents-tabs [for=agent-cursor],#agent-kiro:checked~.agents-tabs [for=agent-kiro]{background:rgba(212,168,67,.1);color:var(--gold);border-color:var(--border-gold)}
+#agent-claude:focus-visible~.agents-tabs [for=agent-claude],#agent-codex:focus-visible~.agents-tabs [for=agent-codex],#agent-cursor:focus-visible~.agents-tabs [for=agent-cursor],#agent-kiro:focus-visible~.agents-tabs [for=agent-kiro]{outline:2px solid var(--gold);outline-offset:3px}
+.agents-demo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:24px}
 .agents-demo-l{padding:0}
 .demo-label-sm{font:10px ui-monospace,monospace;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px}
-.demo-cmd{font:13px/1 ui-monospace,monospace;color:var(--gold);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:12px}
+.demo-cmd{font:13px/1.6 ui-monospace,monospace;color:var(--gold);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:12px;overflow-wrap:anywhere}
 .copy-btn{font:11px ui-monospace,monospace;color:var(--gold-dim);background:transparent;border:1px solid var(--border);border-radius:5px;padding:5px 10px}
 .pack-rows{display:flex;flex-direction:column}
 .pack-row{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px}
 .pack-row:last-child{border:0}
+.pack-row>div,.step>div{min-width:0}
 .pack-tag{font:10px ui-monospace,monospace;color:var(--green);padding-top:3px;flex-shrink:0}
 .demo-note{margin-top:16px;font-size:11px;color:var(--muted);line-height:1.6}
 /* ── Features ── */
-.feats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:32px}
+.feats-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:32px}
 .feat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:24px}
 .feat-n{font:11px ui-monospace,monospace;color:var(--gold);margin-bottom:16px}
 .feat h3{font-size:15px;font-weight:700;margin-bottom:8px;letter-spacing:-.2px}
 .feat p{font-size:13px;color:var(--subtle);line-height:1.65}
 /* ── Roadmap ── */
-.roadmap-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:32px}
+.roadmap-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:32px}
 .road-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:26px}
 .road-card h3{font-size:15px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px}
 .road-list{list-style:none;display:flex;flex-direction:column;gap:0}
 .road-list li{font-size:13px;padding:10px 0;border-top:1px solid var(--border);color:var(--subtle);display:flex;gap:10px;align-items:baseline}
 .road-list li span{flex-shrink:0}
 /* ── CTA ── */
-.cta-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:32px}
+.cta-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:32px}
 .cta-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:30px}
 .cta-card h3{font-size:18px;font-weight:700;letter-spacing:-.3px;margin-bottom:10px}
 .cta-card p{font-size:13px;color:var(--subtle);line-height:1.65;margin-bottom:20px}
-.snippet{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:16px 18px;font:12px/2 ui-monospace,monospace}
+.snippet{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:16px 18px;font:12px/1.85 ui-monospace,monospace;max-width:100%;min-width:0;white-space:pre-wrap;overflow-wrap:anywhere;overflow-x:auto;tab-size:2}
+.snippet code{font:inherit}
 .author-row{margin-top:40px;display:flex;align-items:center;gap:12px;font-size:13px}
 .avatar{width:38px;height:38px;border-radius:50%;background:var(--card);border:1px solid var(--border);display:grid;place-items:center;font:700 14px system-ui;color:var(--gold);flex-shrink:0}
 .author-row small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
 /* ── Footer ── */
 footer{padding:28px 0;display:flex;justify-content:space-between;align-items:center;gap:16px;font-size:11px;color:var(--muted);border-top:1px solid var(--border)}
-.footer-links{display:flex;gap:20px}
+.footer-inner{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;width:100%}
+.footer-links{display:flex;flex-wrap:wrap;gap:20px}
 .footer-links a:hover{color:var(--text)}
 /* ── Responsive ── */
 /* ── Tablet (≤ 860px) ── */
 @media(max-width:860px){
-  .hero-grid,.how-grid,.agents-demo,.cta-grid,.roadmap-grid{grid-template-columns:1fr}
-  .why-grid,.feats-grid{grid-template-columns:1fr 1fr}
-  .hero{padding:64px 0 48px}
+  .hero-grid,.how-grid,.agents-demo,.cta-grid,.roadmap-grid{grid-template-columns:minmax(0,1fr)}
+  .why-grid,.feats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .nav-links{display:none}
+  .hero{padding-block:64px 48px}
+  .hero-grid{gap:32px}
   .hero-lead{max-width:none}
   section{padding:64px 0}
 }
@@ -149,10 +165,11 @@ footer{padding:28px 0;display:flex;justify-content:space-between;align-items:cen
 
   /* Nav: hide links + GitHub btn, keep brand + CTA only */
   .nav-links,.nav-github{display:none}
-  .nav-inner{height:56px}
+  .nav-inner{height:auto;min-height:64px;padding-block:8px;gap:12px}
+  .nav-cta{min-height:44px;padding-inline:14px}
 
   /* Hero */
-  .hero{padding:44px 0 36px}
+  .hero{padding-block:40px 36px}
   h1{font-size:clamp(32px,8.5vw,42px);letter-spacing:-1.8px}
   .hero-lead{font-size:14px;max-width:none;margin-bottom:24px}
   .hero-btns{flex-direction:column;gap:10px}
@@ -164,7 +181,7 @@ footer{padding:28px 0;display:flex;justify-content:space-between;align-items:cen
   .tbody{font:11px/1.9 ui-monospace,monospace;padding:14px 16px;overflow-x:auto;-webkit-overflow-scrolling:touch}
 
   /* Stats: 2×2 with proper inner borders */
-  .stats-strip{grid-template-columns:1fr 1fr}
+  .stats-strip{grid-template-columns:repeat(2,minmax(0,1fr))}
   .stat{padding:18px 0;border-right:1px solid var(--border);border-bottom:1px solid var(--border)}
   .stat:nth-child(2n){border-right:0}
   .stat:nth-child(3),.stat:nth-child(4){border-bottom:0}
@@ -176,7 +193,7 @@ footer{padding:28px 0;display:flex;justify-content:space-between;align-items:cen
   .section-tag{font-size:10px}
 
   /* All 2-col grids → 1 col */
-  .why-grid,.feats-grid,.roadmap-grid,.cta-grid{grid-template-columns:1fr}
+  .why-grid,.feats-grid,.roadmap-grid,.cta-grid{grid-template-columns:minmax(0,1fr)}
 
   /* Cards: tighten padding */
   .why-card,.feat,.road-card,.cta-card{padding:20px}
@@ -189,14 +206,14 @@ footer{padding:28px 0;display:flex;justify-content:space-between;align-items:cen
 
   /* Agents */
   .agents-tabs{gap:5px}
-  .agent-tab{padding:7px 11px;font-size:11px}
-  .demo-cmd{font-size:11px;word-break:break-all;white-space:normal;line-height:1.5;padding:12px 14px}
+  .agent-tab{padding:10px 12px;min-height:44px;display:inline-flex;align-items:center;font-size:12px}
+  .demo-cmd{font-size:12px;white-space:normal;line-height:1.5;padding:12px 14px}
 
   /* Pack rows */
   .pack-row{font-size:12px;gap:10px}
 
-  /* Snippet: scroll wide commands */
-  .snippet{font-size:11px;line-height:1.9;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:pre}
+  /* Wrap long URLs visually without inserting line breaks into copied commands. */
+  .snippet{font-size:12px;padding:14px;line-height:1.85}
 
   /* Author row */
   .author-row{margin-top:28px}
@@ -214,7 +231,7 @@ footer{padding:28px 0;display:flex;justify-content:space-between;align-items:cen
 @media(max-width:360px){
   h1{font-size:30px;letter-spacing:-1.5px}
   .wrap,.nav-inner{padding-inline:14px}
-  .snippet,.tbody{font-size:10px}
+  .tbody{font-size:11px}
   .hero-btns .btn-gold,.hero-btns .btn-outline{padding:12px 16px;font-size:12px}
 }
 
@@ -242,7 +259,7 @@ footer{padding:28px 0;display:flex;justify-content:space-between;align-items:cen
   </div>
 </nav>
 
-<main>
+<main id="main">
 
 <!-- HERO -->
 <div class="wrap hero">
@@ -377,13 +394,25 @@ footer{padding:28px 0;display:flex;justify-content:space-between;align-items:cen
     <div class="agents-demo" style="margin-top:28px">
       <div>
         <div class="demo-label-sm">Launch with compiled context</div>
-        <div class="demo-cmd" id="demo-cmd">brain run claude "add rate limiting"</div>
-        <div class="agents-tabs" role="group" aria-label="Choose agent">
-          <button class="agent-tab" data-agent="claude"  aria-pressed="true">Claude</button>
-          <button class="agent-tab" data-agent="codex"   aria-pressed="false">Codex</button>
-          <button class="agent-tab" data-agent="cursor"  aria-pressed="false">Cursor</button>
-          <button class="agent-tab" data-agent="kiro"    aria-pressed="false">Kiro</button>
-        </div>
+        <fieldset class="agent-selector">
+          <legend>Choose agent</legend>
+          <input class="agent-choice" type="radio" name="demo-agent" id="agent-claude" checked>
+          <input class="agent-choice" type="radio" name="demo-agent" id="agent-codex">
+          <input class="agent-choice" type="radio" name="demo-agent" id="agent-cursor">
+          <input class="agent-choice" type="radio" name="demo-agent" id="agent-kiro">
+          <div class="demo-cmd" aria-live="polite">
+            <span class="agent-command cmd-claude">brain run claude "add rate limiting"</span>
+            <span class="agent-command cmd-codex">brain run codex "add rate limiting"</span>
+            <span class="agent-command cmd-cursor">brain run cursor "add rate limiting"</span>
+            <span class="agent-command cmd-kiro">brain run kiro "add rate limiting"</span>
+          </div>
+          <div class="agents-tabs">
+            <label class="agent-tab" for="agent-claude">Claude</label>
+            <label class="agent-tab" for="agent-codex">Codex</label>
+            <label class="agent-tab" for="agent-cursor">Cursor</label>
+            <label class="agent-tab" for="agent-kiro">Kiro</label>
+          </div>
+        </fieldset>
         <p class="demo-note">Context file written at 0600, deleted on agent exit. Nothing leaves the machine. Or call <code>brain_advise</code> from any MCP client.</p>
       </div>
       <div>
@@ -454,25 +483,23 @@ footer{padding:28px 0;display:flex;justify-content:space-between;align-items:cen
       <div class="cta-card">
         <h3>macOS / Linux</h3>
         <p>Single Go binary. SHA-256 verified. No Node, Docker, or cloud account required. Installs to <code>~/.local/bin</code> without root.</p>
-        <div class="snippet">
-<span class="t-gp">$</span> curl -fsSL https://raw.githubusercontent.com/WolfCanCode/personal-ai-brain/main/install.sh | sh<br>
-<span class="t-gp">$</span> export PATH="$HOME/.local/bin:$PATH"<br>
-<span class="t-gp">$</span> brain init<br>
-<span class="t-ok">✓</span> 2,737 skills indexed<br>
-<span class="t-gp">$</span> brain setup
-        </div>
+        <pre class="snippet" aria-label="macOS and Linux installation commands"><code><span class="t-gp">$</span> curl -fsSL https://raw.githubusercontent.com/WolfCanCode/personal-ai-brain/main/install.sh | sh
+<span class="t-gp">$</span> export PATH="$HOME/.local/bin:$PATH"
+<span class="t-gp">$</span> brain init
+<span class="t-ok">✓</span> 2,737 skills indexed
+<span class="t-gp">$</span> brain setup</code></pre>
       </div>
       <div class="cta-card">
         <h3>Windows · Build from source · MCP</h3>
         <p>PowerShell installer for Windows. Build from source with Go ≥ 1.26. Already installed? <code>brain update</code> upgrades in-place.</p>
-        <div class="snippet">
-<span class="t-mu"># Windows</span><br>
-<span class="t-gp">></span> irm .../install.ps1 | iex<br><br>
-<span class="t-mu"># From source</span><br>
-<span class="t-gp">$</span> go build -o brain ./cmd/brain<br><br>
-<span class="t-mu"># Already installed?</span><br>
-<span class="t-gp">$</span> brain update
-        </div>
+        <pre class="snippet" aria-label="Windows installation and Go build commands"><code><span class="t-mu"># Windows</span>
+<span class="t-gp">&gt;</span> irm https://raw.githubusercontent.com/WolfCanCode/personal-ai-brain/main/install.ps1 | iex
+
+<span class="t-mu"># From source</span>
+<span class="t-gp">$</span> go build -o brain ./cmd/brain
+
+<span class="t-mu"># Already installed?</span>
+<span class="t-gp">$</span> brain update</code></pre>
       </div>
     </div>
     <div class="author-row">
@@ -488,7 +515,7 @@ footer{padding:28px 0;display:flex;justify-content:space-between;align-items:cen
 </main>
 
 <footer>
-  <div class="wrap" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;width:100%">
+  <div class="wrap footer-inner">
     <span>© 2025 WolfCanCode · Noevyra — Intelligence that evolves.</span>
     <div class="footer-links">
       <a href="https://github.com/WolfCanCode/personal-ai-brain" target="_blank" rel="noopener">GitHub</a>
@@ -499,20 +526,5 @@ footer{padding:28px 0;display:flex;justify-content:space-between;align-items:cen
   </div>
 </footer>
 
-<script>
-const cmds = {
-  claude:  'brain run claude  "add rate limiting"',
-  codex:   'brain run codex   "add rate limiting"',
-  cursor:  'brain run cursor  "add rate limiting"',
-  kiro:    'brain run kiro    "add rate limiting"',
-};
-const el = document.getElementById('demo-cmd');
-document.querySelectorAll('.agent-tab').forEach(btn =>
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.agent-tab').forEach(b => b.setAttribute('aria-pressed', String(b === btn)));
-    el.textContent = cmds[btn.dataset.agent];
-  })
-);
-</script>
 </body>
 </html>
