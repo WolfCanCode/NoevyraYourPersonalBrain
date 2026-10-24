@@ -113,6 +113,9 @@ func TestNativeBinary(t *testing.T) {
 	if expected := os.Getenv("BRAIN_EXPECT_VERSION"); expected != "" && (version.Version != expected || version.Commit == "" || version.BuiltAt == "") {
 		t.Fatalf("release metadata: %+v, want %s", version, expected)
 	}
+	if expected := os.Getenv("BRAIN_EXPECT_COMMIT"); expected != "" && version.Commit != expected {
+		t.Fatalf("release commit: got %s, want %s", version.Commit, expected)
+	}
 	var init struct{ CatalogSeeded int }
 	decode(run(project, "", "init"), &init)
 	if init.CatalogSeeded == 0 {

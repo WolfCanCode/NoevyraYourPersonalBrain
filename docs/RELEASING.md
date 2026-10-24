@@ -21,6 +21,8 @@ Targets: Linux x64 and ARM64, macOS Intel and Apple Silicon, Windows x64. These 
 
 ## Create a release
 
+Run **Bump and Release** on `main` with `patch`, `minor`, or `major` to commit the next version, create its tag, test that exact commit on all five native runners, and publish the archives. Optional `git_name` and `git_email` inputs select the bump commit's author; otherwise it uses the triggering account's login and GitHub noreply address. The executable, README badge and landing-page version labels update together. The binary smoke test verifies both the version and the checked-out commit metadata.
+
 After merging tested changes into `main`, create and push a semantic version tag from that exact commit:
 
 ```sh

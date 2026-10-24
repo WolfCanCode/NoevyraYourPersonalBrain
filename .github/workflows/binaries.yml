@@ -2,6 +2,11 @@ name: Tested native binaries
 on:
   workflow_call:
     inputs:
+      ref:
+        description: 'Exact source revision to test and package; defaults to the triggering commit'
+        type: string
+        required: false
+        default: ''
       version:
         description: 'Version to embed (e.g. v0.4.0); falls back to GITHUB_REF for tag-triggered builds'
         type: string
@@ -47,6 +52,7 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5 (Node 24)
         with:
           persist-credentials: false
+          ref: ${{ inputs.ref || github.sha }}
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: '1.27.3'
@@ -76,23 +82,26 @@ jobs:
           TARGET_OS: ${{ matrix.os }}
           TARGET_ARCH: ${{ matrix.arch }}
           EXT: ${{ matrix.ext }}
+          RELEASE_VERSION: ${{ inputs.version }}
         run: |
           test "$(go env GOOS)" = "$TARGET_OS"
           test "$(go env GOARCH)" = "$TARGET_ARCH"
-          if [[ -n "${{ inputs.version }}" ]]; then
-            VERSION="${{ inputs.version }}"
+          BUILD_COMMIT="$(git rev-parse HEAD)"
+          if [[ -n "$RELEASE_VERSION" ]]; then
+            VERSION="$RELEASE_VERSION"
           elif [[ "$GITHUB_REF" == refs/tags/* ]]; then
             VERSION="${GITHUB_REF#refs/tags/}"
           else
-            VERSION="dev-${GITHUB_SHA:0:12}"
+            VERSION="dev-${BUILD_COMMIT:0:12}"
           fi
           echo "BRAIN_VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "BRAIN_COMMIT=$BUILD_COMMIT" >> "$GITHUB_ENV"
           mkdir -p build
-          go build -mod=readonly -trimpath -ldflags "-s -w -X main.version=$VERSION -X main.commit=$GITHUB_SHA -X main.builtAt=$(date -u +%Y-%m-%dT%H:%M:%SZ)" -o "build/brain$EXT" ./cmd/brain
+          go build -mod=readonly -trimpath -ldflags "-s -w -X main.version=$VERSION -X main.commit=$BUILD_COMMIT -X main.builtAt=$(date -u +%Y-%m-%dT%H:%M:%SZ)" -o "build/brain$EXT" ./cmd/brain
       - name: Test the exact executable
         env:
           EXT: ${{ matrix.ext }}
-        run: BRAIN_TEST_BINARY="build/brain$EXT" BRAIN_EXPECT_VERSION="$BRAIN_VERSION" go test -count=1 -v ./tests
+        run: BRAIN_TEST_BINARY="build/brain$EXT" BRAIN_EXPECT_VERSION="$BRAIN_VERSION" BRAIN_EXPECT_COMMIT="$BRAIN_COMMIT" go test -count=1 -v ./tests
       - name: Package and checksum
         env:
           TARGET_OS: ${{ matrix.os }}

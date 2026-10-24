@@ -4,7 +4,7 @@
 
 <p align="center">
   <strong>One brain. Any agent. Zero re-setup.</strong><br>
-  <sub>Local-first · SQLite FTS5 · MCP stdio · 2,737 skills bundled · MIT · v0.7.3</sub>
+  <sub>Local-first · SQLite FTS5 · MCP stdio · 2,737 skills bundled · MIT · v0.8.2</sub>
 </p>
 
 <p align="center">

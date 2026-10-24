@@ -9,6 +9,14 @@ on:
         default: patch
         type: choice
         options: [patch, minor, major]
+      git_name:
+        description: 'Commit author name; defaults to the account running this workflow'
+        type: string
+        required: false
+      git_email:
+        description: 'Commit author email; defaults to the account noreply address'
+        type: string
+        required: false
 
 permissions:
   contents: write
@@ -20,10 +28,12 @@ concurrency:
 jobs:
   # ── 1. Calculate next version, commit, and tag ─────────────────────────────
   bump:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
       tag: ${{ steps.ver.outputs.tag }}
+      commit: ${{ steps.commit.outputs.sha }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5 (Node 24)
         with:
@@ -31,9 +41,14 @@ jobs:
           persist-credentials: true  # required: we push a commit + tag
 
       - name: Configure git author
+        env:
+          RELEASE_GIT_NAME: ${{ inputs.git_name }}
+          RELEASE_GIT_EMAIL: ${{ inputs.git_email }}
+          RELEASE_ACTOR: ${{ github.actor }}
+          RELEASE_ACTOR_ID: ${{ github.actor_id }}
         run: |
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "${RELEASE_GIT_NAME:-$RELEASE_ACTOR}"
+          git config user.email "${RELEASE_GIT_EMAIL:-${RELEASE_ACTOR_ID}+${RELEASE_ACTOR}@users.noreply.github.com}"
 
       - name: Calculate next version
         id: ver
@@ -61,20 +76,25 @@ jobs:
           echo "plain=$plain" >> "$GITHUB_OUTPUT"
           echo "Bumping $latest → $next (${{ inputs.bump }})"
 
-      - name: Update version string in main.go
+      - name: Update executable and landing-page versions
+        env:
+          VERSION_PLAIN: ${{ steps.ver.outputs.plain }}
         run: |
-          sed -i "s|var version = \"[^\"]*\"|var version = \"${{ steps.ver.outputs.plain }}-dev\"|" \
+          sed -i "s|var version = \"[^\"]*\"|var version = \"${VERSION_PLAIN}-dev\"|" \
             cmd/brain/main.go
+          sed -i -E "s/v[0-9]+\.[0-9]+\.[0-9]+/v${VERSION_PLAIN}/g" README.md site/index.html
           grep 'var version' cmd/brain/main.go
 
       - name: Commit version bump
+        id: commit
         run: |
-          git add cmd/brain/main.go
+          git add cmd/brain/main.go README.md site/index.html
           if git diff --staged --quiet; then
             echo "version string already up to date — no commit needed"
           else
             git commit -m "chore: bump version to ${{ steps.ver.outputs.tag }}"
           fi
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Push commit and tag
         run: |
@@ -88,6 +108,7 @@ jobs:
     uses: ./.github/workflows/binaries.yml
     with:
       version: ${{ needs.bump.outputs.tag }}
+      ref: ${{ needs.bump.outputs.commit }}
 
   # ── 3. Verify checksums and publish GitHub Release ────────────────────────
   publish:
@@ -98,6 +119,7 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5 (Node 24)
         with:
           persist-credentials: false
+          ref: ${{ needs.bump.outputs.commit }}
 
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
