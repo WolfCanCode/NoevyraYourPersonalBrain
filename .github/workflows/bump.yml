@@ -35,7 +35,7 @@ jobs:
       tag: ${{ steps.ver.outputs.tag }}
       commit: ${{ steps.commit.outputs.sha }}
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5 (Node 24)
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v5 (Node 24)
         with:
           fetch-depth: 0        # required: we inspect all tags
           persist-credentials: true  # required: we push a commit + tag
@@ -116,7 +116,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5 (Node 24)
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v5 (Node 24)
         with:
           persist-credentials: false
           ref: ${{ needs.bump.outputs.commit }}
